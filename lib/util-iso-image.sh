@@ -239,7 +239,7 @@ configure_displaymanager(){
 					'lightdm-kde-greeter.conf')
 						sed -i -e "s/^.*greeter-session=.*/greeter-session=lightdm-kde-greeter/" ${conf}
 					;;
-					*) break ;;
+					*) ;;
 				esac
 			done
 		;;
@@ -264,7 +264,7 @@ configure_displaymanager(){
 				sed -i -e "s|^.*session=.*|session=/usr/bin/$default_desktop_executable|" ${conf}
 			fi
 		;;
-		*) break ;;
+		*) ;;
 	esac
 	if [[ ${displaymanager} != "none" ]];then
 		if [[ ${initsys} == 'openrc' ]];then
