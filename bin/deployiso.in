@@ -1,0 +1,120 @@
+#!/bin/bash
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+version=@version@
+
+LIBDIR='@libdir@'
+SYSCONFDIR='@sysconfdir@'
+
+[[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
+
+import ${LIBDIR}/util.sh
+import ${LIBDIR}/util-iso.sh
+import ${LIBDIR}/util-publish.sh
+
+show_profile(){
+	cd $1
+		load_profile "$1"
+		msg2 "cache_dir_iso: ${cache_dir_iso}"
+		msg2 "remote_tree: ${remote_tree}"
+	cd ..
+}
+
+display_settings(){
+	show_version
+	show_config
+
+	msg "PROFILE:"
+	msg2 "sets_dir_iso: ${sets_dir_iso}"
+	msg2 "buildsets: $(load_sets ${sets_dir_iso})"
+	msg2 "buildset_iso: ${buildset_iso}"
+	msg2 "is_buildset: ${is_buildset}"
+
+	msg "OPTIONS:"
+	msg2 "arch: ${arch}"
+	msg2 "limit: ${limit} kB/s"
+
+	msg "ARGS:"
+	msg2 "update: ${update}"
+	msg2 "remote_create: ${remote_create}"
+	msg2 "verbose: ${verbose}"
+	msg2 "rsync_args: ${rsync_args[*]}"
+
+	msg "HOST:"
+	msg2 "dist_release: ${dist_release}"
+
+	msg "REMOTE:"
+	msg2 "remote_url: ${remote_url}"
+	msg2 "remote_project: ${remote_project}"
+	msg2 "remote_target: ${remote_target}"
+	msg2 "remote_user: ${remote_user}"
+
+	msg "UPLOAD QUEUE:"
+	run show_profile "${buildset_iso}"
+}
+
+load_user_info
+
+load_config "${USER_CONFIG}/manjaro-tools.conf"
+load_config "${SYSCONFDIR}/manjaro-tools.conf"
+
+pretend=false
+remote_create=false
+update=false
+verbose=false
+
+rsync_args=(-aP --progress -e ssh)
+
+usage() {
+	echo "Usage: ${0##*/} [options]"
+	echo "    -p                 Source folder to upload [default:${buildset_iso}]"
+	echo "    -a                 Arch to upload [default:${arch}]"
+	echo "    -l                 Limit bandwidth in kB/s [default:${limit}]"
+	echo '    -c                 Create new remote edition_type with subtree'
+	echo '    -u                 Update remote iso'
+	echo '    -q                 Query settings and pretend upload'
+	echo '    -v                 Verbose output'
+	echo '    -h                 This help'
+	echo ''
+	echo ''
+	exit $1
+}
+
+opts='p:a:l:cuvqh'
+
+while getopts "${opts}" arg; do
+	case "${arg}" in
+                p) buildset_iso="$OPTARG" ;;
+                a) arch="$OPTARG" ;;
+                l) limit="$OPTARG" ;;
+                c) remote_create=true ;;
+                u) update=true; rsync_args+=(-u) ;;
+                v) verbose=true; rsync_args+=(-v --stats) ;;
+		q) pretend=true; rsync_args+=(-n) ;;
+		h|?) usage 0 ;;
+		*) echo "invalid argument '${arg}'"; usage 1 ;;
+	esac
+done
+
+shift $(($OPTIND - 1))
+
+timer_start=$(get_timer)
+
+eval_buildset "${buildset_iso}" "${sets_dir_iso}"
+
+rsync_args+=(--bwlimit=${limit})
+
+sf_url=${remote_user},${remote_project}@frs.${remote_url}:${remote_target}/${remote_project}
+shell_url=${remote_user},${remote_project}@shell.${remote_url}
+
+${pretend} && display_settings && exit 1
+
+run sync_dir "${buildset_iso}"

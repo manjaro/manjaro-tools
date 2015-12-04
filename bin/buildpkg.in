@@ -22,30 +22,13 @@ SYSCONFDIR='@sysconfdir@'
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-pkg.sh
 
-show_build_queue(){
-	if ${is_buildset};then
-		local list=$(cat ${sets_dir_pkg}/${buildset_pkg}.set)
-		for item in ${list[@]}; do
-			msg3 "Package: [$item]"
+show_pkg(){
+	cd $1
+		source PKGBUILD
+		for n in ${pkgname[@]}; do
+			msg2 "$n"
 		done
-	else
-		for arg in "${makepkg_args[@]}"; do
-			case ${arg} in
-				--pkg) continue ;;
-				-*) continue ;;
-				*) local split_arg=${arg} ;;
-			esac
-		done
-		if [[ -n ${split_arg} ]]; then
-			local IFS=','
-			for item in ${split_arg}; do
-				msg3 "Package: [$item]"
-			done
-			unset IFS
-		else
-			msg3 "Package: [${buildset_pkg}]"
-		fi
-	fi
+	cd ..
 }
 
 display_settings(){
@@ -53,6 +36,7 @@ display_settings(){
 	show_config
 
 	msg "PROFILE:"
+	msg2 "sets_dir_pkg: ${sets_dir_pkg}"
 	msg2 "buildsets: $(load_sets ${sets_dir_pkg})"
 	msg2 "buildset_pkg: ${buildset_pkg}"
 	msg2 "is_buildset: ${is_buildset}"
@@ -67,17 +51,13 @@ display_settings(){
 	msg2 "wipe_clean: ${wipe_clean}"
 	msg2 "namcap: ${namcap}"
 	msg2 "sign: ${sign}"
-	msg2 "makepkg_args: ${makepkg_args[*]}"
+	msg2 "udev_root: ${udev_root}"
+	msg2 "mkchroot_args: ${mkchroot_args[*]}"
 
 	msg "PATHS:"
 	msg2 "work_dir: ${work_dir}"
-	msg2 "sets_dir_pkg: ${sets_dir_pkg}"
 	msg2 "cache_dir_pkg: ${cache_dir_pkg}"
 	msg2 "build_mirror: ${build_mirror}/${branch}"
-
-	msg "BLACKLIST:"
-	msg2 "blacklist_trigger: ${blacklist_trigger[*]}"
-	msg2 "blacklist: ${blacklist[*]}"
 
 	if ${clean_first};then
 		msg "PKG:"
@@ -85,7 +65,7 @@ display_settings(){
 	fi
 
 	msg "BUILD QUEUE:"
-	show_build_queue
+	run show_pkg "${buildset_pkg}"
 }
 
 load_user_info
@@ -96,8 +76,6 @@ load_config "${SYSCONFDIR}/manjaro-tools.conf"
 load_vars "$USER_HOME/.makepkg.conf"
 load_vars /etc/makepkg.conf
 
-pacman_conf_arch='default'
-base_packages=('base-devel')
 install_pkgs=()
 
 clean_first=false
@@ -106,9 +84,10 @@ namcap=false
 pretend=false
 is_buildset=false
 sign=false
+udev_root=false
 
 usage() {
-	echo "Usage: ${0##*/} [options] [--] [makepkg args]"
+	echo "Usage: ${0##*/} [options]"
 	echo "    -p <pkg>           Buildset or pkg [default: ${buildset_pkg}]"
 	echo "    -a <arch>          Arch [default: ${arch}]"
 	echo "    -b <branch>        Branch [default: ${branch}]"
@@ -119,6 +98,7 @@ usage() {
 	echo '    -w                 Clean up cache and sources'
 	echo '    -n                 Install and run namcap check'
 	echo '    -s                 Sign packages'
+	echo '    -u                 Udev base-devel group (no systemd)'
 	echo '    -q                 Query settings and pretend build'
 	echo '    -h                 This help'
 	echo ''
@@ -128,7 +108,7 @@ usage() {
 
 orig_argv=("$@")
 
-opts='p:a:b:r:i:cwnsqh'
+opts='p:a:b:r:i:cwnsuqh'
 
 while getopts "${opts}" arg; do
 	case "${arg}" in
@@ -141,6 +121,7 @@ while getopts "${opts}" arg; do
 		w) wipe_clean=true ;;
 		n) namcap=true; mkchrootpkg_args+=(-n) ;;
 		s) sign=true ;;
+		u) udev_root=true ;;
 		q) pretend=true ;;
 		h|?) usage 0 ;;
 		*) echo "invalid argument '${arg}'"; usage 1 ;;
@@ -148,38 +129,37 @@ while getopts "${opts}" arg; do
 done
 
 if [[ "${arch}" == 'multilib' ]]; then
-	pacman_conf_arch='multilib'
-	base_packages+=('multilib-devel')
-	work_dir=${chroots_pkg}/${branch}/${arch}
-	cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
-	arch='x86_64'
-	is_multilib=true
+        pacman_conf_arch=${arch}
+        work_dir=${chroots_pkg}/${branch}/${arch}
+        cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
+        arch='x86_64'
+        is_multilib=true
 else
-	work_dir=${chroots_pkg}/${branch}/${arch}
-	cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
-	is_multilib=false
+        pacman_conf_arch='default'
+        work_dir=${chroots_pkg}/${branch}/${arch}
+        cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
+        is_multilib=false
 fi
 
 pacman_conf="${PKGDATADIR}/pacman-${pacman_conf_arch}.conf"
 makepkg_conf="${PKGDATADIR}/makepkg-${arch}.conf"
 mirrors_conf="${PKGDATADIR}/pacman-mirrors-${branch}.conf"
 
-chroot_run_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${branch}")
-mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${branch}" -L)
+mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${branch}")
 
 mkchrootpkg_args+=(-r ${work_dir})
-
-makepkg_args+=("${@:$OPTIND}")
 
 check_root "$0" "${orig_argv[@]}"
 
 timer_start=$(get_timer)
 
-prepare_cachedir
+prepare_dir "${cache_dir_pkg}"
 
 eval_buildset "${buildset_pkg}" "${sets_dir_pkg}"
 
 check_requirements
+
+init_base_devel
 
 ${pretend} && display_settings && exit
 
@@ -187,6 +167,4 @@ ${wipe_clean} && clean_up
 
 [[ -d ${work_dir}/root ]] && check_chroot_version "${work_dir}/root"
 
-chroot_init
-
-chroot_build
+run make_pkg "${buildset_pkg}"

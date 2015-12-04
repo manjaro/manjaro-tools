@@ -97,7 +97,7 @@ if ! pacman -r "$newroot" -Sy "${pacman_args[@]}"; then
 fi
 
 # kill chroot process if needed (TODO: check if needed at all)
-fix_dbus "$newroot"
+kill_chroot_process "$newroot"
 
 if ${copykeyring};then
 	copy_keyring "$newroot"

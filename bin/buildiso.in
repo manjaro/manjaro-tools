@@ -24,7 +24,9 @@ show_profile(){
 	cd $1
 		load_profile "$1"
 		if ${verbose};then
+			msg2 "edition_type: ${edition_type}"
 			msg2 "work_dir: ${work_dir}"
+			msg2 "cache_dir_iso: ${cache_dir_iso}"
 			msg2 "iso_file: ${iso_file}"
 			msg2 "is_custom_pac_conf: ${is_custom_pac_conf}"
 			msg2 "initsys: ${initsys}"
@@ -61,24 +63,12 @@ show_profile(){
 	cd ..
 }
 
-show_build_queue(){
-	if ${is_buildset};then
-		local list=$(cat ${sets_dir_iso}/${buildset_iso}.set)
-		for item in ${list[@]}; do
-			check_profile "$item" "break"
-			show_profile "$item"
-		done
-	else
-		check_profile "${buildset_iso}" 'die "Profile sanity check failed."'
-		show_profile "${buildset_iso}"
-	fi
-}
-
 display_settings(){
 	show_version
 	show_config
 
 	msg "PROFILE:"
+	msg2 "sets_dir_iso: ${sets_dir_iso}"
 	msg2 "buildsets: $(load_sets ${sets_dir_iso})"
 	msg2 "buildset_iso: ${buildset_iso}"
 	msg2 "is_buildset: ${is_buildset}"
@@ -93,15 +83,10 @@ display_settings(){
 	msg2 "images_only: ${images_only}"
 	msg2 "iso_only: ${iso_only}"
 
-	msg "PATHS:"
-	msg2 "sets_dir_iso: ${sets_dir_iso}"
-	msg2 "cache_dir_iso: ${cache_dir_iso}"
-
 	msg "DIST SETTINGS:"
 	msg2 "dist_name: ${dist_name}"
 	msg2 "dist_release: ${dist_release}"
 	msg2 "dist_codename: ${dist_codename}"
-	msg2 "dist_version: ${dist_version}"
 
 	msg "ISO SETTINGS:"
 	msg2 "iso_label: ${iso_label}"
@@ -113,7 +98,7 @@ display_settings(){
 	msg2 "use_overlayfs: ${use_overlayfs}"
 
 	msg "BUILD QUEUE:"
-	show_build_queue
+	run show_profile "${buildset_iso}"
 }
 
 load_user_info
@@ -129,7 +114,6 @@ iso_only=false
 verbose=false
 
 pacman_conf_arch='default'
-cache_dir_iso="${cache_dir}/iso"
 
 usage() {
 	echo "Usage: ${0##*/} [options]"
@@ -178,20 +162,18 @@ shift $(($OPTIND - 1))
 
 timer_start=$(get_timer)
 
-[[ "$arch" == 'x86_64' ]] && pacman_conf_arch='multilib'
+[[ "${arch}" == 'x86_64' ]] && pacman_conf_arch='multilib'
 
 mirrors_conf="${PKGDATADIR}/pacman-mirrors-${branch}.conf"
 
 check_root "$0" "${orig_argv[@]}"
 
-prepare_dir "${cache_dir_iso}"
-
 eval_buildset "${buildset_iso}" "${sets_dir_iso}"
 
 import ${LIBDIR}/util-iso.sh
 
-check_requirements
+check_requirements "${buildset_iso}"
 
 ${pretend} && display_settings && exit 1
 
-build_iso
+run make_profile "${buildset_iso}"

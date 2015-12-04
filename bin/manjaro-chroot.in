@@ -79,7 +79,7 @@ if ${automount};then
 	${pretend} && display_settings && exit 1
 
 	if [[ -d /run/systemd ]]; then
-		systemctl start lvm
+		systemctl start lvm2-lvmetad
 	else
 		rc-service lvm start
 	fi

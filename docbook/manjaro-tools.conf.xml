@@ -240,15 +240,6 @@
 
 		<varlistentry>
 			<!-- TODO: We should tell where exactly this is used -->
-			<term><varname>dist_version=</varname></term>
-
-			<listitem><para>Version of the distributions. It defaults to
-			the current date "date +%Y.%m". Example: 15.04
-			</para></listitem>
-		</varlistentry>
-
-		<varlistentry>
-			<!-- TODO: We should tell where exactly this is used -->
 			<term><varname>iso_name=</varname></term>
 
 			<listitem><para>Name of the iso.

@@ -1,6 +1,5 @@
 cinnamon
 lxqt
-net
 openbox
 enlightenment
 netbook
@@ -9,3 +8,6 @@ lxde
 mate
 pantheon
 i3
+bspwm
+budgie
+deepin

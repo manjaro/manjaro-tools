@@ -139,3 +139,5 @@ copy_hostconf "${working_dir}"
 eval $(grep '^CARCH=' "$working_dir/etc/makepkg.conf")
 
 ${CARCH:+setarch "$CARCH"} chroot "${working_dir}" "$@"
+
+kill_chroot_process "${working_dir}"

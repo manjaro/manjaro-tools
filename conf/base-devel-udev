@@ -24,4 +24,6 @@ sudo
 texinfo
 util-linux
 which
-lib32-flex
+>multilib gcc-multilib
+>multilib lib32-fakeroot
+>multilib lib32-libltdl

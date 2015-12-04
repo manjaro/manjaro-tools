@@ -21,10 +21,12 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<refentry id="buildpkg" xmlns:xi="http://www.w3.org/2001/XInclude">
+<refentry id="deployiso" xmlns:xi="http://www.w3.org/2001/XInclude">
+
 	<refentryinfo>
-		<title>buildpkg-+</title>
+		<title>deployiso-+</title>
 		<productname>manjaro-tools</productname>
+
 		<authorgroup>
 			<author>
 				<contrib></contrib>
@@ -36,18 +38,18 @@
 	</refentryinfo>
 
 	<refmeta>
-		<refentrytitle>buildpkg</refentrytitle>
+		<refentrytitle>deployiso</refentrytitle>
 		<manvolnum>1</manvolnum>
 	</refmeta>
 
 	<refnamediv>
-		<refname>buildpkg</refname>
-		<refpurpose>buildpkg is used to build packages in a clean chroot. </refpurpose>
+		<refname>deployiso</refname>
+		<refpurpose>deployiso is used to upload a particular ISO or a set of ISOs. </refpurpose>
 	</refnamediv>
 
 	<refsynopsisdiv>
 		<cmdsynopsis>
-			<command>buildpkg</command>
+			<command>deployiso</command>
 			<arg choice="opt" rep="repeat">OPTIONS</arg>
 		</cmdsynopsis>
 	</refsynopsisdiv>
@@ -55,9 +57,10 @@
 	<refsect1>
 		<title>Description</title>
 
-		<para><command>buildpkg</command> is used to build a particular package or a set of packages. </para>
+		<para><command>deployiso</command> is used to upload a particular ISO or a set of ISOs. </para>
 
-		<para>With buildpkg you can build packages in a clean chroot environment.</para>
+		<para>deployiso is a script to upload a specific iso or a buiildset to SF.
+		It needs to be run inside the iso-profiles directory.</para>
 
 	</refsect1>
 
@@ -71,62 +74,43 @@
 				<term><option>-p PROFILE...</option></term>
 
 				<listitem><para>Name of the buildset or name of the directory
-				you will build. It needs to cantain a existing buildset or a
-				folder with a valid PKGBUILD.</para></listitem>
+				you will upload.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
-				<term><option>-a i686|x86_64|multilib</option></term>
+				<term><option>-a i686|x86_64</option></term>
 
-				<listitem><para>Architecture that the iso will be built. Can be i686, x86_64 or multilib.</para></listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term><option>-b stable|testing|unstable</option></term>
-
-				<listitem><para>Branch to build against..</para></listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term><option>-r DIR</option></term>
-
-				<listitem><para>Root working directory where the package will be built.</para></listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term><option>-i PKG</option></term>
-
-				<listitem><para>Install a package into the working copy of the chroot.</para></listitem>
+				<listitem><para>Architecture of the iso to upload. Can be i686 or x86_64.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
 				<term><option>-c</option></term>
 
-				<listitem><para>Recreate chroot.</para></listitem>
+				<listitem><para>Create new remote edition_type with subtree.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
-				<term><option>-w</option></term>
+				<term><option>-l</option></term>
 
-				<listitem><para>Clean up cache and sources.</para></listitem>
+				<listitem><para>Limit bandwidth in kB/s.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
-				<term><option>-n</option></term>
+				<term><option>-u</option></term>
 
-				<listitem><para>Install built package in chroot and run namcap check.</para></listitem>
+				<listitem><para>Update remote iso.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
-				<term><option>-s</option></term>
+				<term><option>-v</option></term>
 
-				<listitem><para>Sign package.</para></listitem>
+				<listitem><para>Verbose output.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
 				<term><option>-q</option></term>
 
-				<listitem><para>Query settings and pretend build.</para></listitem>
+				<listitem><para>Query settings and pretend upload.</para></listitem>
 			</varlistentry>
 
 			<varlistentry>
@@ -138,10 +122,20 @@
 
 	</refsect1>
 
+	<!--<refsect1>
+		<title>Exit status</title>
+
+		<para>On success, 0 is returned, a non-zero failure code
+		otherwise.</para>
+	</refsect1>
+	-->
+
 	<refsect1>
 		<title>See Also</title>
 		<para>
 			<citerefentry project='manjaro-tools'><refentrytitle>manjaro-tools.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+			<citerefentry project='manjaro-tools'><refentrytitle>profiles.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
 		</para>
 	</refsect1>
+
 </refentry>

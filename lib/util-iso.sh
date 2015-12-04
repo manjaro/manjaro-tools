@@ -12,16 +12,25 @@
 import ${LIBDIR}/util-iso-image.sh
 import ${LIBDIR}/util-iso-boot.sh
 import ${LIBDIR}/util-iso-calamares.sh
+import ${LIBDIR}/util-pac-conf.sh
 
-if ${use_overlayfs};then
-	import ${LIBDIR}/util-iso-overlayfs.sh
-else
-	import ${LIBDIR}/util-iso-aufs.sh
-fi
+import_util_iso_fs(){
+	if ${use_overlayfs};then
+		import ${LIBDIR}/util-iso-overlayfs.sh
+	else
+		import ${LIBDIR}/util-iso-aufs.sh
+	fi
+}
+
+find_profile(){
+	local result=$(find . -maxdepth 1 -name "$1")
+	[[ -z $result ]] && die "${buildset_iso} is not a valid profile or buildset!"
+}
 
 # $1: path
 # $2: exit code
 check_profile(){
+	find_profile "$1"
 	local keyfiles=('profile.conf' 'mkinitcpio.conf' 'Packages' 'Packages-Livecd')
 	local keydirs=('overlay' 'overlay-livecd' 'isolinux')
 	local has_keyfiles=false has_keydirs=false
@@ -47,14 +56,12 @@ check_profile(){
 }
 
 check_requirements(){
-	if ${is_buildset};then
-		for p in $(cat ${sets_dir_iso}/${buildset_iso}.set);do
-			[[ -z $(find . -type d -name "${p}") ]] && die "${buildset_iso} is not a valid buildset!"
-			check_profile "$p"
-		done
-	else
-		[[ -z $(find . -type d -name "${buildset_iso}") ]] && die "${buildset_iso} is not a valid profile directory!"
-		check_profile "${buildset_iso}"
+	run check_profile "${buildset_iso}"
+	if ! $(is_valid_arch_iso ${arch});then
+		die "${arch} is not a valid arch!"
+	fi
+	if ! $(is_valid_branch ${branch});then
+		die "${branch} is not a valid branch!"
 	fi
 }
 
@@ -568,6 +575,9 @@ check_profile_conf(){
 	if ! is_valid_init "${initsys}";then
 		die "initsys only accepts openrc/systemd value!"
 	fi
+	if ! is_valid_edition "${edition_type}";then
+		die "edition_type only accepts official/community/community-minimal/sonar/netrunner value!"
+	fi
 	if ! is_valid_bool "${autologin}";then
 		die "autologin only accepts true/false value!"
 	fi
@@ -611,6 +621,11 @@ load_profile(){
 	work_dir=${chroots_iso}/$1/${arch}
 
 	[[ -d ${work_dir}/root-image ]] && check_chroot_version "${work_dir}/root-image"
+
+	remote_tree="${edition_type}/$1/${dist_release}/${arch}"
+
+	cache_dir_iso="${cache_dir}/iso/${remote_tree}"
+	prepare_dir "${cache_dir_iso}"
 }
 
 compress_images(){
@@ -651,6 +666,7 @@ make_profile(){
 	msg "Start building [$1]"
 	cd $1
 		load_profile "$1"
+		import_util_iso_fs
 		${clean_first} && chroot_clean "${work_dir}"
 		if ${iso_only}; then
 			[[ ! -d ${work_dir} ]] && die "Create images: buildiso -p ${buildset_iso} -i"
@@ -670,12 +686,3 @@ make_profile(){
 	msg3 "Time ${FUNCNAME}: $(elapsed_time ${timer_start}) minutes"
 }
 
-build_iso(){
-	if ${is_buildset};then
-		for prof in $(cat ${sets_dir_iso}/${buildset_iso}.set); do
-			make_profile "$prof"
-		done
-	else
-		make_profile "${buildset_iso}"
-	fi
-}

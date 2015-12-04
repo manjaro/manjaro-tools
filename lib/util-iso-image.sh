@@ -184,9 +184,9 @@ detect_desktop_env(){
 			default_desktop_executable="pantheon-session"
 			default_desktop_file="pantheon"
 			msg2 "Detected Pantheon desktop environment"
-		elif [ -e "$1/usr/bin/budgie-session" ] && [ -e "$1/usr/share/xsessions/budgie-session.desktop" ]; then
+		elif [ -e "$1/usr/bin/budgie-session" ] && [ -e "$1/usr/share/xsessions/budgie-desktop.desktop" ]; then
 			default_desktop_executable="budgie-session"
-			default_desktop_file="budgie-session"
+			default_desktop_file="budgie-desktop"
 			msg2 "Detected Budgie desktop environment"
 		elif [ -e "$1/usr/bin/i3" ] && [ -e "$1/usr/share/xsessions/i3.desktop" ]; then
 			default_desktop_executable="i3"

@@ -8,49 +8,34 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-create_set(){
-	msg "[$1/${name}.set]"
-	if [[ -f $1/${name}.set ]];then
-		msg3 "Backing up $1/${name}.set.orig"
-		mv "$1/${name}.set" "$1/${name}.set.orig"
-	fi
-	local list=$(find * -maxdepth 0 -type d | sort)
-	for item in ${list[@]};do
-		if [[ -f $item/$2 ]];then
-			cd $item
-				msg2 "Adding ${item##*/}"
-				echo ${item##*/} >> $1/${name}.set || break
-			cd ..
-		fi
+read_set(){
+	local _space="s| ||g" \
+		_clean=':a;N;$!ba;s/\n/ /g' \
+		_com_rm="s|#.*||g"
+
+	stack=$(sed "$_com_rm" "$1" \
+		| sed "$_space" \
+		| sed "$_clean")
+}
+
+# $1: sets_dir
+load_sets(){
+	local prof temp
+	for item in $(ls $1/*.set); do
+		temp=${item##*/}
+		prof=${prof:-}${prof:+|}${temp%.set}
 	done
+	echo $prof
 }
 
-get_deps(){
-	echo $(pactree -u $1)
-}
-
-calculate_build_order(){
-	msg3 "Calculating build order ..."
-	for pkg in $(cat $1/${name}.set);do
-		cd $pkg
-			mksrcinfo
-		cd ..
-	done
-}
-
-remove_set(){
-	if [[ -f $1/${name}.set ]]; then
-		msg "Removing [$1/${name}.set] ..."
-		rm $1/${name}.set
-	fi
-}
-
-show_set(){
-	local list=$(cat $1/${name}.set)
-	msg "Content of [$1/${name}.set] ..."
-	for item in ${list[@]}; do
-		msg2 "$item"
-	done
+# $1: buildset
+# $2: sets_dir
+eval_buildset(){
+	eval "case $1 in
+		$(load_sets $2)) is_buildset=true ;;
+		*) is_buildset=false ;;
+	esac"
+	${is_buildset} && read_set $2/$1.set
 }
 
 get_timer(){
@@ -71,138 +56,6 @@ elapsed_time_ms(){
 	echo $(echo $1 $(get_timer_ms) | awk '{ printf "%0.3f",($2-$1)/1000 }')
 }
 
-##
-#  usage : in_array( $needle, $haystack )
-# return : 0 - found
-#          1 - not found
-##
-in_array() {
-	local needle=$1; shift
-	local item
-	for item in "$@"; do
-		[[ $item = $needle ]] && return 0 # Found
-	done
-	return 1 # Not Found
-}
-
-# $1: sofile
-# $2: soarch
-process_sofile() {
-	# extract the library name: libfoo.so
-	local soname="${1%.so?(+(.+([0-9])))}".so
-	# extract the major version: 1
-	soversion="${1##*\.so\.}"
-	if [[ "$soversion" = "$1" ]] && (($IGNORE_INTERNAL)); then
-		continue
-	fi
-	if ! in_array "${soname}=${soversion}-$2" ${soobjects[@]}; then
-	# libfoo.so=1-64
-		msg "${soname}=${soversion}-$2"
-		soobjects+=("${soname}=${soversion}-$2")
-	fi
-}
-
-##
-#  usage : get_full_version( [$pkgname] )
-# return : full version spec, including epoch (if necessary), pkgver, pkgrel
-##
-get_full_version() {
-	# set defaults if they weren't specified in buildfile
-	pkgbase=${pkgbase:-${pkgname[0]}}
-	epoch=${epoch:-0}
-	if [[ -z $1 ]]; then
-		if [[ $epoch ]] && (( ! $epoch )); then
-			echo $pkgver-$pkgrel
-		else
-			echo $epoch:$pkgver-$pkgrel
-		fi
-	else
-		for i in pkgver pkgrel epoch; do
-			local indirect="${i}_override"
-			eval $(declare -f package_$1 | sed -n "s/\(^[[:space:]]*$i=\)/${i}_override=/p")
-			[[ -z ${!indirect} ]] && eval ${indirect}=\"${!i}\"
-		done
-		if (( ! $epoch_override )); then
-			echo $pkgver_override-$pkgrel_override
-		else
-			echo $epoch_override:$pkgver_override-$pkgrel_override
-		fi
-	fi
-}
-
-##
-#  usage: find_cached_package( $pkgname, $pkgver, $arch )
-#
-#    $pkgver can be supplied with or without a pkgrel appended.
-#    If not supplied, any pkgrel will be matched.
-##
-find_cached_package() {
-	local searchdirs=("$PWD" "$PKGDEST") results=()
-	local targetname=$1 targetver=$2 targetarch=$3
-	local dir pkg pkgbasename pkgparts name ver rel arch size r results
-
-	for dir in "${searchdirs[@]}"; do
-		[[ -d $dir ]] || continue
-
-		for pkg in "$dir"/*.pkg.tar.xz; do
-			[[ -f $pkg ]] || continue
-
-			# avoid adding duplicates of the same inode
-			for r in "${results[@]}"; do
-				[[ $r -ef $pkg ]] && continue 2
-			done
-
-			# split apart package filename into parts
-			pkgbasename=${pkg##*/}
-			pkgbasename=${pkgbasename%.pkg.tar?(.?z)}
-
-			arch=${pkgbasename##*-}
-			pkgbasename=${pkgbasename%-"$arch"}
-
-			rel=${pkgbasename##*-}
-			pkgbasename=${pkgbasename%-"$rel"}
-
-			ver=${pkgbasename##*-}
-			name=${pkgbasename%-"$ver"}
-
-			if [[ $targetname = "$name" && $targetarch = "$arch" ]] &&
-				pkgver_equal "$targetver" "$ver-$rel"; then
-				results+=("$pkg")
-			fi
-		done
-	done
-
-	case ${#results[*]} in
-		0)
-		return 1
-		;;
-		1)
-		printf '%s\n' "$results"
-		return 0
-		;;
-		*)
-		error 'Multiple packages found:'
-		printf '\t%s\n' "${results[@]}" >&2
-		return 1
-		;;
-	esac
-}
-
-##
-# usage: pkgver_equal( $pkgver1, $pkgver2 )
-##
-pkgver_equal() {
-	local left right
-
-	if [[ $1 = *-* && $2 = *-* ]]; then
-		# if both versions have a pkgrel, then they must be an exact match
-		[[ $1 = "$2" ]]
-	else
-		# otherwise, trim any pkgrel and compare the bare version.
-		[[ ${1%%-*} = "${2%%-*}" ]]
-	fi
-}
-
 check_root() {
 	(( EUID == 0 )) && return
 	if type -P sudo >/dev/null; then
@@ -210,71 +63,6 @@ check_root() {
 	else
 		exec su root -c "$(printf ' %q' "$@")"
 	fi
-}
-
-
-# $1: section
-parse_section() {
-	local is_section=0
-	while read line; do
-		[[ $line =~ ^\ {0,}# ]] && continue
-		[[ -z "$line" ]] && continue
-		if [ $is_section == 0 ]; then
-			if [[ $line =~ ^\[.*?\] ]]; then
-				line=${line:1:$((${#line}-2))}
-				section=${line// /}
-				if [[ $section == $1 ]]; then
-					is_section=1
-					continue
-				fi
-				continue
-			fi
-		elif [[ $line =~ ^\[.*?\] && $is_section == 1 ]]; then
-			break
-		else
-			pc_key=${line%%=*}
-			pc_key=${pc_key// /}
-			pc_value=${line##*=}
-			pc_value=${pc_value## }
-			eval "$pc_key='$pc_value'"
-		fi
-	done < "${pacman_conf}"
-}
-
-get_repos() {
-	local section repos=() filter='^\ {0,}#'
-	while read line; do
-		[[ $line =~ "${filter}" ]] && continue
-		[[ -z "$line" ]] && continue
-		if [[ $line =~ ^\[.*?\] ]]; then
-			line=${line:1:$((${#line}-2))}
-			section=${line// /}
-			case ${section} in
-				"options") continue ;;
-				*) repos+=("${section}") ;;
-			esac
-		fi
-	done < "${pacman_conf}"
-	echo ${repos[@]}
-}
-
-clean_pacman_conf(){
-	local repositories=$(get_repos) uri='file://'
-	msg "Cleaning [$1/etc/pacman.conf] ..."
-	for repo in ${repositories[@]}; do
-		case ${repo} in
-			'options'|'core'|'extra'|'community'|'multilib') continue ;;
-			*)
-				msg2 "parsing [${repo}] ..."
-				parse_section ${repo}
-				if [[ ${pc_value} == $uri* ]]; then
-					msg2 "Removing local repo [${repo}] ..."
-					sed -i "/^\[${repo}/,/^Server/d" $1/etc/pacman.conf
-				fi
-			;;
-		esac
-	done
-	msg "Done cleaning [$1/etc/pacman.conf]"
 }
 
 copy_mirrorlist(){
@@ -301,6 +89,30 @@ load_vars() {
 
 prepare_dir(){
 	[[ ! -d $1 ]] && mkdir -p $1
+}
+
+version_gen(){
+	local y=$(date +%Y) m=$(date +%m)
+	dist_release=${y:2}.$m
+}
+
+version_gen2(){
+    local y=$(date +%Y) m=$(date +%m)
+    local release_versions=($y.03 $y.06 $y.09 $y.12)
+
+    for ver in ${release_versions[@]};do
+        case $m in
+            01) dist_release=${y:2}.12.1 ;;
+            02) dist_release=${y:2}.12.2 ;;
+            03|06|09|12) dist_release=${y:2}.${ver#.*} ;;
+            04) dist_release=${y:2}.03.1 ;;
+            05) dist_release=${y:2}.03.2 ;;
+            07) dist_release=${y:2}.06.1 ;;
+            08) dist_release=${y:2}.06.2 ;;
+            10) dist_release=${y:2}.09.1 ;;
+            11) dist_release=${y:2}.09.2 ;;
+        esac
+    done
 }
 
 init_common(){
@@ -332,21 +144,17 @@ init_buildtree(){
 init_buildpkg(){
 	chroots_pkg="${chroots_dir}/buildpkg"
 
-	sets_dir_pkg="${sets_dir}/pkg"
+	sets_dir_pkg="${sets_dir}/pkg.d"
 
 	prepare_dir "${sets_dir_pkg}"
 
 	[[ -z ${buildset_pkg} ]] && buildset_pkg='default'
-
-	[[ -z ${blacklist_trigger[@]} ]] && blacklist_trigger=('eudev' 'upower-pm-utils' 'eudev-systemdcompat')
-
-	[[ -z ${blacklist[@]} ]] && blacklist=('libsystemd')
 }
 
 init_buildiso(){
 	chroots_iso="${chroots_dir}/buildiso"
 
-	sets_dir_iso="${sets_dir}/iso"
+	sets_dir_iso="${sets_dir}/iso.d"
 
 	prepare_dir "${sets_dir_iso}"
 
@@ -355,8 +163,9 @@ init_buildiso(){
 	##### iso settings #####
 
 	if [[ -z ${dist_release} ]];then
-		source /etc/lsb-release
-		dist_release=${DISTRIB_RELEASE}
+# 		source /etc/lsb-release
+# 		dist_release=${DISTRIB_RELEASE}
+		version_gen2
 	fi
 
 	if [[ -z ${dist_codename} ]];then
@@ -365,8 +174,6 @@ init_buildiso(){
 	fi
 
 	[[ -z ${dist_branding} ]] && dist_branding="MJRO"
-
-	[[ -z ${dist_version} ]] && dist_version=$(date +%Y.%m)
 
 	[[ -z ${dist_name} ]] && dist_name="Manjaro"
 
@@ -391,6 +198,19 @@ init_buildiso(){
 	[[ ${used_kernel} -lt "4" ]] && use_overlayfs='false'
 }
 
+init_deployiso(){
+
+	[[ -z ${remote_target} ]] && remote_target="/home/frs/project"
+
+	[[ -z ${remote_project} ]] && remote_project="manjaro-testing"
+
+	[[ -z ${remote_user} ]] && remote_user="[SetUser]"
+
+	[[ -z ${remote_url} ]] && remote_url="sourceforge.net"
+
+	[[ -z ${limit} ]] && limit=100
+}
+
 load_config(){
 
 	[[ -f $1 ]] || return 1
@@ -406,6 +226,8 @@ load_config(){
 	init_buildpkg
 
 	init_buildiso
+
+	init_deployiso
 
 	return 0
 }
@@ -465,7 +287,7 @@ load_profile_config(){
 	fi
 
 	if [[ -z ${start_openrc[@]} ]];then
-		start_openrc=('acpid' 'bluetooth' 'consolekit' 'cronie' 'cupsd' 'dbus' 'syslog-ng' 'NetworkManager')
+		start_openrc=('acpid' 'bluetooth' 'cgmanager' 'consolekit' 'cronie' 'cupsd' 'dbus' 'syslog-ng' 'NetworkManager')
 	fi
 
 	if [[ -z ${disable_openrc[@]} ]];then
@@ -480,6 +302,8 @@ load_profile_config(){
 		start_openrc_live=('livecd' 'mhwd-live' 'pacman-init')
 	fi
 
+	[[ -z ${edition_type} ]] && edition_type="official"
+
 	return 0
 }
 
@@ -488,25 +312,6 @@ clean_dir(){
 		msg "Cleaning [$1] ..."
 		rm -r $1/*
 	fi
-}
-
-# $1: sets_dir
-load_sets(){
-	local prof temp
-	for item in $(ls $1/*.set); do
-		temp=${item##*/}
-		prof=${prof:-}${prof:+|}${temp%.set}
-	done
-	echo $prof
-}
-
-# $1: buildset
-# $2: sets_dir
-eval_buildset(){
-	eval "case $1 in
-		$(load_sets $2)) is_buildset=true ;;
-		*) is_buildset=false ;;
-	esac"
 }
 
 load_user_info(){
@@ -535,23 +340,23 @@ show_config(){
 }
 
 # $1: chroot
-fix_dbus(){
+kill_chroot_process(){
 	# enable to have more debug info
 	#msg "machine-id (etc): $(cat $1/etc/machine-id)"
 	#[[ -e $1/var/lib/dbus/machine-id ]] && msg "machine-id (lib): $(cat $1/var/lib/dbus/machine-id)"
 	#msg "running processes: "
 	#lsof | grep $1
 
-	local PREFIX="$1" LINK PID NAME
-	for ROOT in /proc/*/root; do
-		LINK=$(readlink $ROOT)
-		if [ "x$LINK" != "x" ]; then
-			if [ "x${LINK:0:${#PREFIX}}" = "x$PREFIX" ]; then
+	local prefix="$1" flink pid name
+	for root_dir in /proc/*/root; do
+		flink=$(readlink $root_dir)
+		if [ "x$flink" != "x" ]; then
+			if [ "x${flink:0:${#prefix}}" = "x$prefix" ]; then
 				# this process is in the chroot...
-				PID=$(basename $(dirname "$ROOT"))
-				NAME=$(ps -p $PID -o comm=)
-				msg3 "Killing chroot process: $NAME ($PID)"
-				kill -9 "$PID"
+				pid=$(basename $(dirname "$root_dir"))
+				name=$(ps -p $pid -o comm=)
+				msg3 "Killing chroot process: $name ($pid)"
+				kill -9 "$pid"
 			fi
 		fi
 	done
@@ -581,4 +386,50 @@ is_valid_init(){
 		'openrc'|'systemd') return 0 ;;
 		*) return 1 ;;
 	esac
+}
+
+is_valid_edition(){
+	case $1 in
+		'official'|'community'|'community-minimal'|'sonar'|'netrunner') return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+is_valid_arch_pkg(){
+	case $1 in
+		'i686'|'x86_64'|'multilib') return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+is_valid_arch_iso(){
+	case $1 in
+		'i686'|'x86_64') return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+is_valid_branch(){
+	case $1 in
+		'stable'|'testing'|'unstable') return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+run(){
+	if ${is_buildset};then
+		for item in ${stack[@]};do
+			$1 $item
+		done
+	else
+		$1 $2
+	fi
+}
+
+run_svc(){
+	if [[ -d /run/systemd ]];then
+		$@
+	else
+		$@
+	fi
 }

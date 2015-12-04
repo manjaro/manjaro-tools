@@ -199,7 +199,7 @@ write_isolinux_cfg(){
 		if [[ ${initsys} == 'systemd' ]]; then
 			plymouth_settings=""
 		else
-			plymouth_settings="quiet"
+			plymouth_settings=" quiet"
 		fi
 	fi
 	if [[ -f ${path_iso}/${iso_name}/boot/intel_ucode.img ]] ; then
