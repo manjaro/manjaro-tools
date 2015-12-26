@@ -10,13 +10,13 @@
 # GNU General Public License for more details.
 
 copy_efi_shells(){
-	if [[ -f ${PKGDATADIR}/efi_shell/shellx64_v1.efi ]];then
+	if [[ -f ${DATADIR}/efi_shell/shellx64_v1.efi ]];then
 		msg2 "Copying shellx64_v1.efi ..."
-		cp ${PKGDATADIR}/efi_shell/shellx64_v1.efi $1/
+		cp ${DATADIR}/efi_shell/shellx64_v1.efi $1/
 	fi
-	if [[ -f ${PKGDATADIR}/efi_shell/shellx64_v2.efi ]];then
+	if [[ -f ${DATADIR}/efi_shell/shellx64_v2.efi ]];then
 		msg2 "Copying shellx64_v2.efi ..."
-		cp ${PKGDATADIR}/efi_shell/shellx64_v2.efi $1/
+		cp ${DATADIR}/efi_shell/shellx64_v2.efi $1/
 	fi
 }
 
@@ -34,11 +34,11 @@ set_mkinicpio_hooks(){
 
 copy_initcpio(){
 	msg2 "Copying initcpio ..."
-	cp /usr/lib/initcpio/hooks/miso* $1/usr/lib/initcpio/hooks
-	cp /usr/lib/initcpio/install/miso* $1/usr/lib/initcpio/install
-	cp mkinitcpio.conf $1/etc/mkinitcpio-${iso_name}.conf
-	set_mkinicpio_hooks "$1/etc/mkinitcpio-${iso_name}.conf"
-	sed -e 's|"$@"|"$@" >/dev/null 2>&1|' -i $1/usr/lib/initcpio/init
+	cp /usr/lib/initcpio/hooks/miso* $2/usr/lib/initcpio/hooks
+	cp /usr/lib/initcpio/install/miso* $2/usr/lib/initcpio/install
+	cp $1/mkinitcpio.conf $2/etc/mkinitcpio-${iso_name}.conf
+	set_mkinicpio_hooks "$2/etc/mkinitcpio-${iso_name}.conf"
+	sed -e 's|"$@"|"$@" >/dev/null 2>&1|' -i $2/usr/lib/initcpio/init
 }
 
 # $1: work_dir
@@ -251,33 +251,34 @@ write_isolinux_msg(){
 }
 
 update_isolinux_cfg(){
-	local fn=isolinux.cfg
+	local fn=$1/isolinux.cfg
 	msg2 "Updating ${fn} ..."
 	sed -i "s|%ISO_LABEL%|${iso_label}|g;
 			s|%ISO_NAME%|${iso_name}|g;
-			s|%ARCH%|${arch}|g" $1/${fn}
+			s|%ARCH%|${arch}|g" $2/${fn}
 }
 
 update_isolinux_msg(){
-	local fn=isolinux.msg
+	local fn=$1/isolinux.msg
 	msg2 "Updating ${fn} ..."
-	sed -i "s|%DIST_NAME%|${dist_name}|g" $1/${fn}
+	sed -i "s|%DIST_NAME%|${dist_name}|g" $2/${fn}
 }
 
 write_isomounts(){
-	echo '# syntax: <img> <arch> <mount point> <type> <kernel argument>' > $1
-	echo '# Sample kernel argument in syslinux: overlay=extra,extra2' >> $1
-	echo '' >> $1
+	local file=$2/isomounts
+	echo '# syntax: <img> <arch> <mount point> <type> <kernel argument>' > ${file}
+	echo '# Sample kernel argument in syslinux: overlay=extra,extra2' >> ${file}
+	echo '' >> ${file}
 	msg2 "Writing livecd entry ..."
-	echo "${arch}/livecd-image.sqfs ${arch} / squashfs" >> $1
-	if [[ -f Packages-Mhwd ]] ; then
+	echo "${arch}/livecd-image.sqfs ${arch} / squashfs" >> ${file}
+	if [[ -f $1/Packages-Mhwd ]] ; then
 		msg2 "Writing mhwd entry ..."
-		echo "${arch}/mhwd-image.sqfs ${arch} / squashfs" >> $1
+		echo "${arch}/mhwd-image.sqfs ${arch} / squashfs" >> ${file}
 	fi
 	if [[ -f "${packages_custom}" ]] ; then
 		msg2 "Writing ${custom} entry ..."
-		echo "${arch}/${custom}-image.sqfs ${arch} / squashfs" >> $1
+		echo "${arch}/${custom}-image.sqfs ${arch} / squashfs" >> ${file}
 	fi
 	msg2 "Writing root entry ..."
-	echo "${arch}/root-image.sqfs ${arch} / squashfs" >> $1
+	echo "${arch}/root-image.sqfs ${arch} / squashfs" >> ${file}
 }

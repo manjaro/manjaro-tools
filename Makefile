@@ -3,13 +3,32 @@ Version=0.9.15
 PREFIX = /usr/local
 SYSCONFDIR = /etc
 
-BIN = \
+SYSCONF = \
+	data/manjaro-tools.conf
+
+BIN_BASE = \
 	bin/mkchroot \
 	bin/basestrap \
 	bin/manjaro-chroot \
 	bin/fstabgen \
-	bin/buildset \
 	bin/chroot-run
+
+LIBS_BASE = \
+	lib/util.sh \
+	lib/util-mount.sh \
+	lib/util-msg.sh \
+	lib/util-pac-conf.sh \
+	lib/util-fstab.sh
+
+SHARED_BASE = \
+	data/pacman-default.conf \
+	data/pacman-multilib.conf \
+	data/pacman-mirrors-stable.conf \
+	data/pacman-mirrors-testing.conf \
+	data/pacman-mirrors-unstable.conf
+
+SETS_PKG = \
+	data/pkg.d/default.set
 
 BIN_PKG = \
 	bin/checkpkg \
@@ -22,49 +41,25 @@ BIN_PKG = \
 	bin/buildpkg \
 	bin/buildtree
 
+LIBS_PKG = \
+	lib/util-pkg.sh \
+	lib/util-pkgtree.sh
+
+SHARED_PKG = \
+	data/makepkg-i686.conf \
+	data/base-devel-udev \
+	data/makepkg-x86_64.conf
+
+SETS_ISO = \
+	data/iso.d/default.set \
+	data/iso.d/official.set \
+	data/iso.d/community.set \
+	data/iso.d/community-minimal.set
+
 BIN_ISO = \
 	bin/buildiso \
 	bin/testiso \
 	bin/deployiso
-
-SYSCONF = \
-	conf/manjaro-tools.conf
-
-SETS_PKG = \
-	sets/pkg.d/default.set
-
-SETS_ISO = \
-	sets/iso.d/default.set \
-	sets/iso.d/official.set \
-	sets/iso.d/community.set \
-	sets/iso.d/community-minimal.set
-
-SHARED = \
-	conf/pacman-default.conf \
-	conf/pacman-multilib.conf \
-	conf/pacman-mirrors-stable.conf \
-	conf/pacman-mirrors-testing.conf \
-	conf/pacman-mirrors-unstable.conf
-
-SHARED_PKG = \
-	conf/makepkg-i686.conf \
-	conf/base-devel-udev \
-	conf/makepkg-x86_64.conf
-
-SHARED_ISO = \
-	conf/pacman-gfx.conf \
-	conf/profile.conf.example
-
-LIBS = \
-	lib/util.sh \
-	lib/util-mount.sh \
-	lib/util-msg.sh \
-	lib/util-pac-conf.sh \
-	lib/util-fstab.sh
-
-LIBS_PKG = \
-	lib/util-pkg.sh \
-	lib/util-pkgtree.sh
 
 LIBS_ISO = \
 	lib/util-iso.sh \
@@ -75,8 +70,11 @@ LIBS_ISO = \
 	lib/util-livecd.sh \
 	lib/util-iso-boot.sh \
 	lib/util-publish.sh \
-	lib/util-sets.sh \
 	lib/util-iso-log.sh
+
+SHARED_ISO = \
+	data/pacman-gfx.conf \
+	data/profile.conf.example
 
 CPIOHOOKS = \
 	initcpio/hooks/miso \
@@ -94,12 +92,11 @@ CPIOINST = \
 	initcpio/inst/miso_kms
 
 SCRIPTS = \
-	scripts/mhwd-live \
-	scripts/livecd \
-	scripts/kbd-model-map
+	data/scripts/mhwd-live \
+	data/scripts/livecd \
+	data/scripts/kbd-model-map
 
 MAN_XML = \
-	buildset.xml \
 	buildpkg.xml \
 	buildtree.xml \
 	buildiso.xml \
@@ -107,10 +104,9 @@ MAN_XML = \
 	manjaro-tools.conf.xml \
 	profile.conf.xml
 
-all: $(BIN) $(BIN_PKG) $(BIN_ISO) doc #bin/bash_completion bin/zsh_completion
+all: $(BIN_BASE) $(BIN_PKG) $(BIN_ISO) doc
 
-edit = sed -e "s|@pkgdatadir[@]|$(DESTDIR)$(PREFIX)/share/manjaro-tools|g" \
-	-e "s|@bindir[@]|$(DESTDIR)$(PREFIX)/bin|g" \
+edit = sed -e "s|@datadir[@]|$(DESTDIR)$(PREFIX)/share/manjaro-tools|g" \
 	-e "s|@sysconfdir[@]|$(DESTDIR)$(SYSCONFDIR)/manjaro-tools|g" \
 	-e "s|@libdir[@]|$(DESTDIR)$(PREFIX)/lib/manjaro-tools|g" \
 	-e "s|@version@|${Version}|"
@@ -127,7 +123,7 @@ doc:
 	$(foreach var,$(MAN_XML),xsltproc /usr/share/docbook2X/xslt/man/docbook.xsl docbook/$(var) | db2x_manxml --output-dir man ;)
 
 clean:
-	rm -f $(BIN) ${BIN_PKG} ${BIN_ISO} #bin/bash_completion bin/zsh_completion
+	rm -f $(BIN_BASE) ${BIN_PKG} ${BIN_ISO}
 	rm -rf man
 
 install_base:
@@ -135,24 +131,17 @@ install_base:
 	install -m0644 ${SYSCONF} $(DESTDIR)$(SYSCONFDIR)/manjaro-tools
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/bin
-	install -m0755 ${BIN} $(DESTDIR)$(PREFIX)/bin
+	install -m0755 ${BIN_BASE} $(DESTDIR)$(PREFIX)/bin
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/lib/manjaro-tools
-	install -m0644 ${LIBS} $(DESTDIR)$(PREFIX)/lib/manjaro-tools
+	install -m0644 ${LIBS_BASE} $(DESTDIR)$(PREFIX)/lib/manjaro-tools
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/share/manjaro-tools
-	install -m0644 ${SHARED} $(DESTDIR)$(PREFIX)/share/manjaro-tools
-
-	install -dm0755 $(DESTDIR)$(PREFIX)/share/man/man1
-	gzip -c man/buildset.1 > $(DESTDIR)$(PREFIX)/share/man/man1/buildset.1.gz
-
-# 	install -Dm0644 bin/bash_completion $(DESTDIR)/$(PREFIX)/share/bash-completion/completions/manjaro_tools
-# 	install -Dm0644 bin/zsh_completion $(DESTDIR)$(PREFIX)/share/zsh/site-functions/_manjaro_tools
-
+	install -m0644 ${SHARED_BASE} $(DESTDIR)$(PREFIX)/share/manjaro-tools
 
 install_pkg:
-	install -dm0755 $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/pkg.d
-	install -m0644 ${SETS_PKG} $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/pkg.d
+	install -dm0755 $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/pkg.d
+	install -m0644 ${SETS_PKG} $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/pkg.d
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/bin
 	install -m0755 ${BIN_PKG} $(DESTDIR)$(PREFIX)/bin
@@ -169,10 +158,9 @@ install_pkg:
 	gzip -c man/buildpkg.1 > $(DESTDIR)$(PREFIX)/share/man/man1/buildpkg.1.gz
 	gzip -c man/buildtree.1 > $(DESTDIR)$(PREFIX)/share/man/man1/buildtree.1.gz
 
-
 install_iso:
-	install -dm0755 $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/iso.d
-	install -m0644 ${SETS_ISO} $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/iso.d
+	install -dm0755 $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/iso.d
+	install -m0644 ${SETS_ISO} $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/iso.d
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/bin
 	install -m0755 ${BIN_ISO} $(DESTDIR)$(PREFIX)/bin
@@ -200,20 +188,14 @@ install_iso:
 	gzip -c man/manjaro-tools.conf.5 > $(DESTDIR)$(PREFIX)/share/man/man5/manjaro-tools.conf.5.gz
 	gzip -c man/profile.conf.5 > $(DESTDIR)$(PREFIX)/share/man/man5/profile.conf.5.gz
 
-
 uninstall_base:
 	for f in ${SYSCONF}; do rm -f $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/$$f; done
-	for f in ${BIN}; do rm -f $(DESTDIR)$(PREFIX)/bin/$$f; done
-	for f in ${SHARED}; do rm -f $(DESTDIR)$(PREFIX)/share/manjaro-tools/$$f; done
-	for f in ${LIBS}; do rm -f $(DESTDIR)$(PREFIX)/lib/manjaro-tools/$$f; done
-	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/buildset.1.gz
-
-# 	rm $(DESTDIR)/$(PREFIX)/share/bash-completion/completions/manjaro_tools
-# 	rm $(DESTDIR)$(PREFIX)/share/zsh/site-functions/_manjaro_tools
-
+	for f in ${BIN_BASE}; do rm -f $(DESTDIR)$(PREFIX)/bin/$$f; done
+	for f in ${SHARED_BASE}; do rm -f $(DESTDIR)$(PREFIX)/share/manjaro-tools/$$f; done
+	for f in ${LIBS_BASE}; do rm -f $(DESTDIR)$(PREFIX)/lib/manjaro-tools/$$f; done
 
 uninstall_pkg:
-	for f in ${SETS_PKG}; do rm -f $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/pkg.d/$$f; done
+	for f in ${SETS_PKG}; do rm -f $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/pkg.d/$$f; done
 	for f in ${BIN_PKG}; do rm -f $(DESTDIR)$(PREFIX)/bin/$$f; done
 	rm -f $(DESTDIR)$(PREFIX)/bin/find-libprovides
 	for f in ${SHARED_PKG}; do rm -f $(DESTDIR)$(PREFIX)/share/manjaro-tools/$$f; done
@@ -221,9 +203,8 @@ uninstall_pkg:
 	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/buildpkg.1.gz
 	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/buildtree.1.gz
 
-
 uninstall_iso:
-	for f in ${SETS_ISO}; do rm -f $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/sets/iso.d/$$f; done
+	for f in ${SETS_ISO}; do rm -f $(DESTDIR)$(SYSCONFDIR)/manjaro-tools/iso.d/$$f; done
 	for f in ${BIN_ISO}; do rm -f $(DESTDIR)$(PREFIX)/bin/$$f; done
 	for f in ${SHARED_ISO}; do rm -f $(DESTDIR)$(PREFIX)/share/manjaro-tools/$$f; done
 	for f in ${LIBS_ISO}; do rm -f $(DESTDIR)$(PREFIX)/lib/manjaro-tools/$$f; done
@@ -234,7 +215,6 @@ uninstall_iso:
 	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/deployiso.1.gz
 	rm -f $(DESTDIR)$(PREFIX)/share/man/man5/manjaro-tools.conf.5.gz
 	rm -f $(DESTDIR)$(PREFIX)/share/man/man5/profile.conf.5.gz
-
 
 install: install_base install_pkg install_iso
 

@@ -5,14 +5,11 @@
 # possible values: openrc,systemd
 # initsys="systemd"
 
-# edition type
-# accepted value: official, community, sonar, netrunner
-# edition_type="official"
-
 # use multilib packages; x86_64 only
 # multilib="true"
 
-# displaymanager="lightdm"
+# default displaymanager
+# displaymanager="none"
 
 # Set to false to disable autologin in the livecd
 # autologin="true"

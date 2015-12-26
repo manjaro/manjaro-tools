@@ -11,9 +11,8 @@
 
 version=@version@
 
-BINDIR='@bindir@'
 LIBDIR='@libdir@'
-PKGDATADIR='@pkgdatadir@'
+DATADIR='@datadir@'
 SYSCONFDIR='@sysconfdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
@@ -21,46 +20,46 @@ SYSCONFDIR='@sysconfdir@'
 import ${LIBDIR}/util.sh
 
 show_profile(){
-	cd $1
-		load_profile "$1"
-		if ${verbose};then
-			msg2 "edition_type: ${edition_type}"
-			msg2 "work_dir: ${work_dir}"
-			msg2 "cache_dir_iso: ${cache_dir_iso}"
-			msg2 "iso_file: ${iso_file}"
-			msg2 "is_custom_pac_conf: ${is_custom_pac_conf}"
-			msg2 "initsys: ${initsys}"
-			if ${use_overlayfs};then
-				msg2 "mount system: overlayfs"
-			else
-				msg2 "mount system: aufs"
-			fi
-			[[ ${arch} == 'x86_64' ]] && msg2 "multilib: ${multilib}"
-			msg2 "displaymanager: ${displaymanager}"
-			msg2 "autologin: ${autologin}"
-			msg2 "nonfree_xorg: ${nonfree_xorg}"
-			msg2 "kernel: ${kernel}"
-			msg2 "efi_boot_loader: ${efi_boot_loader}"
-			msg2 "efi_part_size: ${efi_part_size}"
-			msg2 "pxe_boot: ${pxe_boot}"
-			msg2 "plymouth_boot: ${plymouth_boot}"
-			${plymouth_boot} && msg2 "plymouth_theme: ${plymouth_theme}"
-			msg2 "hostname: ${hostname}"
-			msg2 "username: ${username}"
-			msg2 "password: ${password}"
-			msg2 "addgroups: ${addgroups}"
-
-			if [[ ${initsys} == 'systemd' ]];then
-				msg2 "start_systemd: ${start_systemd[*]}"
-				msg2 "start_systemd_live: ${start_systemd_live[*]}"
-				msg2 "disable_systemd: ${disable_systemd[*]}"
-			else
-				msg2 "start_openrc: ${start_openrc[*]}"
-				msg2 "start_openrc_live: ${start_openrc_live[*]}"
-				msg2 "disable_openrc: ${disable_openrc[*]}"
-			fi
+	eval_edition "$1"
+	load_profile "${run_dir}/${edition}/$1"
+	msg2 "edition: ${edition}"
+	if ${verbose};then
+		msg2 "work_dir: ${work_dir}"
+		msg2 "iso_dir: ${iso_dir}"
+		msg2 "iso_file: ${iso_file}"
+		msg2 "is_custom_pac_conf: ${is_custom_pac_conf}"
+		msg2 "initsys: ${initsys}"
+		if ${use_overlayfs};then
+			msg2 "mount system: overlayfs"
+		else
+			msg2 "mount system: aufs"
 		fi
-	cd ..
+		[[ ${arch} == 'x86_64' ]] && msg2 "multilib: ${multilib}"
+		msg2 "displaymanager: ${displaymanager}"
+		msg2 "autologin: ${autologin}"
+		msg2 "nonfree_xorg: ${nonfree_xorg}"
+		msg2 "kernel: ${kernel}"
+		msg2 "efi_boot_loader: ${efi_boot_loader}"
+		msg2 "efi_part_size: ${efi_part_size}"
+		msg2 "pxe_boot: ${pxe_boot}"
+		msg2 "plymouth_boot: ${plymouth_boot}"
+		${plymouth_boot} && msg2 "plymouth_theme: ${plymouth_theme}"
+		msg2 "hostname: ${hostname}"
+		msg2 "username: ${username}"
+		msg2 "password: ${password}"
+		msg2 "addgroups: ${addgroups}"
+
+		if [[ ${initsys} == 'systemd' ]];then
+			msg2 "start_systemd: ${start_systemd[*]}"
+			msg2 "start_systemd_live: ${start_systemd_live[*]}"
+			msg2 "disable_systemd: ${disable_systemd[*]}"
+		else
+			msg2 "start_openrc: ${start_openrc[*]}"
+			msg2 "start_openrc_live: ${start_openrc_live[*]}"
+			msg2 "disable_openrc: ${disable_openrc[*]}"
+		fi
+	fi
+	unset_profile
 }
 
 display_settings(){
@@ -69,9 +68,10 @@ display_settings(){
 
 	msg "PROFILE:"
 	msg2 "sets_dir_iso: ${sets_dir_iso}"
-	msg2 "buildsets: $(load_sets ${sets_dir_iso})"
+	msg2 "buildsets: $(list_sets ${sets_dir_iso})"
 	msg2 "buildset_iso: ${buildset_iso}"
 	msg2 "is_buildset: ${is_buildset}"
+	msg2 "profile_repo: ${profile_repo}"
 
 	msg "OPTIONS:"
 	msg2 "arch: ${arch}"
@@ -103,11 +103,15 @@ display_settings(){
 
 load_user_info
 
-load_config "${USER_CONFIG}/manjaro-tools.conf"
+load_config "${USERCONFDIR}/manjaro-tools.conf"
 load_config "${SYSCONFDIR}/manjaro-tools.conf"
 
-clean_first=true
+# to force old way to have buildiso run in iso-profiles dir
+# run_dir=$(pwd)
 
+load_run_dir "${profile_repo}"
+
+clean_first=true
 pretend=false
 images_only=false
 iso_only=false
@@ -164,15 +168,15 @@ timer_start=$(get_timer)
 
 [[ "${arch}" == 'x86_64' ]] && pacman_conf_arch='multilib'
 
-mirrors_conf="${PKGDATADIR}/pacman-mirrors-${branch}.conf"
+mirrors_conf="${DATADIR}/pacman-mirrors-${branch}.conf"
 
 check_root "$0" "${orig_argv[@]}"
 
-eval_buildset "${buildset_iso}" "${sets_dir_iso}"
+eval_buildset "${sets_dir_iso}" "${buildset_iso}"
 
 import ${LIBDIR}/util-iso.sh
 
-check_requirements "${buildset_iso}"
+check_requirements
 
 ${pretend} && display_settings && exit 1
 

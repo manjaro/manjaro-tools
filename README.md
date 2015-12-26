@@ -17,7 +17,7 @@ By default, the config is installed in
 A user manjaro-tools.conf can be placed in
 
 ~~~
-$HOME/.config/manjaro-tools.conf
+$HOME/.config/manjaro-tools/manjaro-tools.conf
 ~~~
 
 If the userconfig is present, manjaro-tools will load the userconfig values, however, if variables have been set in the systemwide
@@ -32,6 +32,19 @@ By default it is commented and shows just initialization values done in code.
 
 Tools configuration is done in manjaro-tools.conf or by args.
 Specifying args will override manjaro-tools.conf settings.
+
+User sets can be placed in
+
+~~~
+$HOME/.config/manjaro-tools/{pkg,iso}.d
+~~~
+
+overriding
+
+~~~
+/etc/manjaro-tools/{pkg,iso}.d
+~~~
+
 
 ~~~
 ######################################################
@@ -49,9 +62,6 @@ Specifying args will override manjaro-tools.conf settings.
 
 # build dir where buildpkg or buildiso chroots are created
 # chroots_dir=/var/lib/manjaro-tools
-
-# default path to sets
-# sets_dir=/etc/manjaro-tools/sets
 
 # custom build mirror server
 # build_mirror=http://mirror.netzspielplatz.de/manjaro/packages
@@ -73,6 +83,9 @@ Specifying args will override manjaro-tools.conf settings.
 
 ################ buildiso ################
 
+# the iso-profiles directory name/git repo name
+# profile_repo='manjaro-tools-iso-profiles'
+
 # default iso buildset; name without .set extension
 # buildset_iso=default
 
@@ -80,10 +93,10 @@ Specifying args will override manjaro-tools.conf settings.
 # dist_name="Manjaro"
 
 # unset defaults to given value
-# dist_release=15.09
+# dist_release=15.12
 
 # unset defaults to value sourced from /etc/lsb-release
-# dist_codename="Bellatrix"
+# dist_codename="Capella"
 
 # unset defaults to given value
 # dist_branding="MJRO"
@@ -137,7 +150,7 @@ It it run in a abs/pkgbuilds directory which contains directories with PKGBUILD.
 
 ~~~
 $ buildpkg -h
-Usage: buildpkg [options] [--] [makepkg args]
+Usage: buildpkg [options]
     -p <pkg>           Buildset or pkg [default: default]
     -a <arch>          Arch [default: auto]
     -b <branch>        Branch [default: stable]
@@ -242,60 +255,8 @@ The branch can be defined also in manjaro-tools.conf, but a manual parameter wil
 ######* -s
 * Use this to sqfs compress the chroots if you previously used -i.
 
-###4. buildset
 
-buildpkg and buildiso support building from buildsets
-
-Default location of sets is:
-
-~~~
-/etc/manjaro-tools/manjaro-tools/sets/pkg.d
-/etc/manjaro-tools/manjaro-tools/sets/iso.d
-~~~
-
-but it can be configured in the manjaro-tools.conf.
-
-buildset is a little helper tool to easily create buildsets.
-It is run inside the abs/pkgbuilds or iso profiles directory.
-
-####Arguments
-
-~~~
-$ buildset -h
-Usage: buildset [options]
-    -c <name>   Create set
-    -r <name>   Remove set
-    -s <name>   Show set
-    -i          Iso mode
-    -q          Query sets
-    -h          This help
-~~~
-
-######* create a pkg buildset for lxqt
-
-~~~
-buildset -c lxqt-0.8
-~~~
-
-######* create a iso buildset
-
-~~~
-buildset -ic manjaro-0.9.0
-~~~
-
-The buildset name should not be a name of a package or profile!
-Else buildpkg/buildiso won't recognize the build list and will only build the package/profile specified. The -p arg handles set and package/profile name.
-
-If you create a buildset manually, the buildset must have a .set extension.
-
-* Examples:
-
-~~~
-/etc/manjaro-tools/sets/pkg.d/lxqt-0.8.set
-/etc/manjaro-tools/sets/iso.d/manjaro-0.9.0.set
-~~~
-
-###5. buildtree
+###4. buildtree
 
 buildtree is a little tools to sync arch abs and manjaro PKGBUILD git repos.
 
@@ -317,7 +278,7 @@ Usage: buildtree [options]
 buildtree -as
 ~~~
 
-###6. manjaro-chroot
+###5. manjaro-chroot
 
 manjaro-chroot is a little tool to quickly chroot into a second system installed on the host.
 If the automount option is enabled, manjaro-chroot will detect installed systems with os-prober, and pops up a list with linux systems to select from.
@@ -327,12 +288,15 @@ If there is only 1 system installed besides the host system, no list will pop up
 
 ~~~
 $ manjaro-chroot -h
-usage: ${0##*/} chroot-dir [command]
+usage: manjaro-chroot -a [or] manjaro-chroot chroot-dir [command]
     -a             Automount detected linux system
     -q             Query settings and pretend
     -h             Print this help message
 
     If 'command' is unspecified, manjaro-chroot will launch /bin/sh.
+
+    If 'automount' is true, manjaro-chroot will launch /bin/bash
+    and /build/manjaro-tools/manjaro-chroot.
 ~~~
 
 ######* automount
@@ -347,7 +311,7 @@ manjaro-chroot -a
 manjaro-chroot /mnt /bin/bash
 ~~~
 
-###7. deployiso
+###6. deployiso
 
 deployiso is a script to upload a specific iso or a buiildset to SF.
 It needs to be run inside the iso-profiles directory.
@@ -360,10 +324,12 @@ Ideally, you have a running ssh agent on the host, and your key added, and your 
 $ deployiso -h
 Usage: deployiso [options]
     -p                 Source folder to upload [default:default]
+    -a                 Arch to upload [default:x86_64]
+    -l                 Limit bandwidth in kB/s [default:80]
     -c                 Create new remote edition_type with subtree
     -u                 Update remote iso
-    -l                 Limit bandwidth in kB/s
     -q                 Query settings and pretend upload
+    -v                 Verbose output
     -h                 This help
 ~~~
 

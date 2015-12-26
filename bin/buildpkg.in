@@ -14,7 +14,7 @@ version=@version@
 shopt -s nullglob
 
 LIBDIR='@libdir@'
-PKGDATADIR='@pkgdatadir@'
+DATADIR='@datadir@'
 SYSCONFDIR='@sysconfdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
@@ -37,7 +37,7 @@ display_settings(){
 
 	msg "PROFILE:"
 	msg2 "sets_dir_pkg: ${sets_dir_pkg}"
-	msg2 "buildsets: $(load_sets ${sets_dir_pkg})"
+	msg2 "buildsets: $(list_sets ${sets_dir_pkg})"
 	msg2 "buildset_pkg: ${buildset_pkg}"
 	msg2 "is_buildset: ${is_buildset}"
 
@@ -56,7 +56,7 @@ display_settings(){
 
 	msg "PATHS:"
 	msg2 "work_dir: ${work_dir}"
-	msg2 "cache_dir_pkg: ${cache_dir_pkg}"
+	msg2 "pkg_dir: ${pkg_dir}"
 	msg2 "build_mirror: ${build_mirror}/${branch}"
 
 	if ${clean_first};then
@@ -70,7 +70,7 @@ display_settings(){
 
 load_user_info
 
-load_config "${USER_CONFIG}/manjaro-tools.conf"
+load_config "${USERCONFDIR}/manjaro-tools.conf"
 load_config "${SYSCONFDIR}/manjaro-tools.conf"
 
 load_vars "$USER_HOME/.makepkg.conf"
@@ -131,19 +131,19 @@ done
 if [[ "${arch}" == 'multilib' ]]; then
         pacman_conf_arch=${arch}
         work_dir=${chroots_pkg}/${branch}/${arch}
-        cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
+        pkg_dir=${cache_dir_pkg}/${branch}/${arch}
         arch='x86_64'
         is_multilib=true
 else
         pacman_conf_arch='default'
         work_dir=${chroots_pkg}/${branch}/${arch}
-        cache_dir_pkg=${cache_dir}/pkg/${branch}/${arch}
+        pkg_dir=${cache_dir_pkg}/${branch}/${arch}
         is_multilib=false
 fi
 
-pacman_conf="${PKGDATADIR}/pacman-${pacman_conf_arch}.conf"
-makepkg_conf="${PKGDATADIR}/makepkg-${arch}.conf"
-mirrors_conf="${PKGDATADIR}/pacman-mirrors-${branch}.conf"
+pacman_conf="${DATADIR}/pacman-${pacman_conf_arch}.conf"
+makepkg_conf="${DATADIR}/makepkg-${arch}.conf"
+mirrors_conf="${DATADIR}/pacman-mirrors-${branch}.conf"
 
 mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${branch}")
 
@@ -153,11 +153,11 @@ check_root "$0" "${orig_argv[@]}"
 
 timer_start=$(get_timer)
 
-prepare_dir "${cache_dir_pkg}"
-
-eval_buildset "${buildset_pkg}" "${sets_dir_pkg}"
+eval_buildset "${sets_dir_pkg}" "${buildset_pkg}"
 
 check_requirements
+
+prepare_dir "${pkg_dir}"
 
 init_base_devel
 
@@ -165,6 +165,8 @@ ${pretend} && display_settings && exit
 
 ${wipe_clean} && clean_up
 
-[[ -d ${work_dir}/root ]] && check_chroot_version "${work_dir}/root"
+#[[ -d ${work_dir}/root ]] && check_chroot_version "${work_dir}/root"
+
+chroot_init
 
 run make_pkg "${buildset_pkg}"

@@ -29,7 +29,7 @@ load_group(){
 		_clean=':a;N;$!ba;s/\n/ /g' \
 		_com_rm="s|#.*||g" \
 		devel_packages='' \
-		file=${PKGDATADIR}/base-devel-udev
+		file=${DATADIR}/base-devel-udev
 
         msg3 "Loading Group [$file] ..."
 
@@ -96,8 +96,8 @@ chroot_update(){
 
 clean_up(){
 	msg "Cleaning up ..."
-	msg2 "Cleaning [${cache_dir_pkg}]"
-	find ${cache_dir_pkg} -maxdepth 1 -name "*.*" -delete #&> /dev/null
+	msg2 "Cleaning [${pkg_dir}]"
+	find ${pkg_dir} -maxdepth 1 -name "*.*" -delete #&> /dev/null
 	if [[ -z $SRCDEST ]];then
 		msg2 "Cleaning [source files]"
 		find $PWD -maxdepth 1 -name '*.?z?' -delete #&> /dev/null
@@ -105,7 +105,7 @@ clean_up(){
 }
 
 sign_pkg(){
-	su ${OWNER} -c "signpkg ${cache_dir_pkg}/$1"
+	su ${OWNER} -c "signpkg ${pkg_dir}/$1"
 }
 
 run_post_build(){
@@ -120,24 +120,24 @@ run_post_build(){
 	if [[ -n $PKGDEST ]];then
 		if [[ -n ${pkgbase} ]];then
 			for p in ${pkgname[@]};do
-				mv $PKGDEST/${p}-${pinfo}.${ext} ${cache_dir_pkg}/
+				mv $PKGDEST/${p}-${pinfo}.${ext} ${pkg_dir}/
 				${sign} && sign_pkg ${p}-${pinfo}.${ext}
 				loglist+=("*$p*.log")
 				lname=${pkgbase}
 			done
 		else
-			mv $PKGDEST/${pkgname}-${pinfo}.${ext} ${cache_dir_pkg}/
+			mv $PKGDEST/${pkgname}-${pinfo}.${ext} ${pkg_dir}/
 			${sign} && sign_pkg ${pkgname}-${pinfo}.${ext}
 			loglist+=("*${pkgname}*.log")
 			lname=${pkgname}
 		fi
 	else
-		mv *.${ext} ${cache_dir_pkg}
+		mv *.${ext} ${pkg_dir}
 		${sign} && sign_pkg ${pkgname}-${pinfo}.${ext}
 		loglist+=("*${pkgname}*.log")
 		lname=${pkgname}
 	fi
-	chown -R "${OWNER}:users" "${cache_dir_pkg}"
+	chown -R "${OWNER}:users" "${pkg_dir}"
 	if [[ -z $LOGDEST ]];then
 		tar -cjf ${lname}-${pinfo}.log.tar.xz ${loglist[@]}
 		find $PWD -maxdepth 1 -name '*.log' -delete #&> /dev/null
@@ -159,11 +159,10 @@ chroot_init(){
 }
 
 make_pkg(){
-	chroot_init
 	msg "Start building [$1]"
 	cd $1
 		setarch "${arch}" \
-			mkchrootpkg ${mkchrootpkg_args[*]} || eval "$2"
+			mkchrootpkg ${mkchrootpkg_args[*]} || abort
 		run_post_build
 	cd ..
 	msg "Finished building [$1]"

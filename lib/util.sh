@@ -13,13 +13,13 @@ read_set(){
 		_clean=':a;N;$!ba;s/\n/ /g' \
 		_com_rm="s|#.*||g"
 
-	stack=$(sed "$_com_rm" "$1" \
+	stack=$(sed "$_com_rm" "$1.set" \
 		| sed "$_space" \
 		| sed "$_clean")
 }
 
 # $1: sets_dir
-load_sets(){
+list_sets(){
 	local prof temp
 	for item in $(ls $1/*.set); do
 		temp=${item##*/}
@@ -28,14 +28,22 @@ load_sets(){
 	echo $prof
 }
 
-# $1: buildset
-# $2: sets_dir
+
+# $1: sets_dir
+# $2: buildset
 eval_buildset(){
-	eval "case $1 in
-		$(load_sets $2)) is_buildset=true ;;
+	eval "case $2 in
+		$(list_sets $1)) is_buildset=true ;;
 		*) is_buildset=false ;;
 	esac"
-	${is_buildset} && read_set $2/$1.set
+	${is_buildset} && read_set $1/$2
+}
+
+eval_edition(){
+	local result=$(find ${run_dir} -maxdepth 2 -name "$1") path
+	[[ -z $result ]] && die "$1 is not a valid profile or buildset!"
+	path=${result%/*}
+	edition=${path##*/}
 }
 
 get_timer(){
@@ -97,22 +105,12 @@ version_gen(){
 }
 
 version_gen2(){
-    local y=$(date +%Y) m=$(date +%m)
-    local release_versions=($y.03 $y.06 $y.09 $y.12)
-
-    for ver in ${release_versions[@]};do
-        case $m in
-            01) dist_release=${y:2}.12.1 ;;
-            02) dist_release=${y:2}.12.2 ;;
-            03|06|09|12) dist_release=${y:2}.${ver#.*} ;;
-            04) dist_release=${y:2}.03.1 ;;
-            05) dist_release=${y:2}.03.2 ;;
-            07) dist_release=${y:2}.06.1 ;;
-            08) dist_release=${y:2}.06.2 ;;
-            10) dist_release=${y:2}.09.1 ;;
-            11) dist_release=${y:2}.09.2 ;;
-        esac
-    done
+	local y=$(date +%Y) m=$(date +%m)
+	case $month in
+		01|04|07|10) dist_release=${y:2}.$m.1 ;;
+		02|05|08|11) dist_release=${y:2}.$m.2 ;;
+		*) dist_release=${y:2}.$m ;;
+	esac
 }
 
 init_common(){
@@ -123,8 +121,6 @@ init_common(){
 	[[ -z ${cache_dir} ]] && cache_dir='/var/cache/manjaro-tools'
 
 	[[ -z ${chroots_dir} ]] && chroots_dir='/var/lib/manjaro-tools'
-
-	[[ -z ${sets_dir} ]] && sets_dir="${SYSCONFDIR}/sets"
 
 	[[ -z ${build_mirror} ]] && build_mirror='http://mirror.netzspielplatz.de/manjaro/packages'
 }
@@ -144,28 +140,36 @@ init_buildtree(){
 init_buildpkg(){
 	chroots_pkg="${chroots_dir}/buildpkg"
 
-	sets_dir_pkg="${sets_dir}/pkg.d"
+	sets_dir_pkg="${SYSCONFDIR}/pkg.d"
 
 	prepare_dir "${sets_dir_pkg}"
 
+	[[ -d ${USERCONFDIR}/pkg.d ]] && sets_dir_pkg=${USERCONFDIR}/pkg.d
+
 	[[ -z ${buildset_pkg} ]] && buildset_pkg='default'
+
+	cache_dir_pkg=${cache_dir}/pkg
 }
 
 init_buildiso(){
 	chroots_iso="${chroots_dir}/buildiso"
 
-	sets_dir_iso="${sets_dir}/iso.d"
+	sets_dir_iso="${SYSCONFDIR}/iso.d"
 
 	prepare_dir "${sets_dir_iso}"
 
+	[[ -d ${USERCONFDIR}/iso.d ]] && sets_dir_iso=${USERCONFDIR}/iso.d
+
 	[[ -z ${buildset_iso} ]] && buildset_iso='default'
+
+	cache_dir_iso="${cache_dir}/iso"
 
 	##### iso settings #####
 
 	if [[ -z ${dist_release} ]];then
 # 		source /etc/lsb-release
 # 		dist_release=${DISTRIB_RELEASE}
-		version_gen2
+		version_gen
 	fi
 
 	if [[ -z ${dist_codename} ]];then
@@ -196,6 +200,8 @@ init_buildiso(){
 	[[ -z ${use_overlayfs} ]] && use_overlayfs='true'
 	used_kernel=$(uname -r | cut -d . -f1)
 	[[ ${used_kernel} -lt "4" ]] && use_overlayfs='false'
+
+	[[ -z ${profile_repo} ]] && profile_repo='manjaro-tools-iso-profiles'
 }
 
 init_deployiso(){
@@ -230,6 +236,35 @@ load_config(){
 	init_deployiso
 
 	return 0
+}
+
+unset_profile(){
+	unset initsys
+	unset displaymanager
+	unset autologin
+	unset multilib
+	unset pxe_boot
+	unset plymouth_boot
+	unset nonfree_xorg
+	unset default_desktop_executable
+	unset default_desktop_file
+	unset kernel
+	unset efi_boot_loader
+	unset efi_part_size
+	unset hostname
+	unset username
+	unset plymouth_theme
+	unset password
+	unset addgroups
+	unset start_systemd
+	unset disable_systemd
+	unset start_openrc
+	unset disable_openrc
+	unset start_systemd_live
+	unset start_openrc_live
+	unset use_overlayfs
+	unset packages_custom
+	unset packages_mhwd
 }
 
 load_profile_config(){
@@ -302,8 +337,6 @@ load_profile_config(){
 		start_openrc_live=('livecd' 'mhwd-live' 'pacman-init')
 	fi
 
-	[[ -z ${edition_type} ]] && edition_type="official"
-
 	return 0
 }
 
@@ -312,6 +345,17 @@ clean_dir(){
 		msg "Cleaning [$1] ..."
 		rm -r $1/*
 	fi
+}
+
+write_repo_conf(){
+	local repos=$(find $USER_HOME -type f -name ".buildiso")
+	local path name
+
+	for r in ${repos[@]}; do
+		path=${r%/.*}
+		name=${path##*/}
+		echo run_dir=$path > ${USERCONFDIR}/$name.conf
+	done
 }
 
 load_user_info(){
@@ -323,7 +367,14 @@ load_user_info(){
 		USER_HOME=$HOME
 	fi
 
-	USER_CONFIG="$USER_HOME/.config"
+	USERCONFDIR="$USER_HOME/.config/manjaro-tools"
+	prepare_dir "${USERCONFDIR}"
+}
+
+load_run_dir(){
+	[[ -f ${USERCONFDIR}/$1.conf ]] || write_repo_conf
+	[[ -r ${USERCONFDIR}/$1.conf ]] && source ${USERCONFDIR}/$1.conf
+	return 0
 }
 
 show_version(){
@@ -332,8 +383,8 @@ show_version(){
 }
 
 show_config(){
-	if [[ -f ${USER_CONFIG}/manjaro-tools.conf ]]; then
-		msg2 "user_config: ${USER_CONFIG}/manjaro-tools.conf"
+	if [[ -f ${USERCONFDIR}/manjaro-tools.conf ]]; then
+		msg2 "user_config: ${USERCONFDIR}/manjaro-tools.conf"
 	else
 		msg2 "manjaro_tools_conf: ${manjaro_tools_conf}"
 	fi
@@ -388,13 +439,6 @@ is_valid_init(){
 	esac
 }
 
-is_valid_edition(){
-	case $1 in
-		'official'|'community'|'community-minimal'|'sonar'|'netrunner') return 0 ;;
-		*) return 1 ;;
-	esac
-}
-
 is_valid_arch_pkg(){
 	case $1 in
 		'i686'|'x86_64'|'multilib') return 0 ;;
@@ -423,13 +467,5 @@ run(){
 		done
 	else
 		$1 $2
-	fi
-}
-
-run_svc(){
-	if [[ -d /run/systemd ]];then
-		$@
-	else
-		$@
 	fi
 }

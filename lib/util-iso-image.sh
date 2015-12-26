@@ -9,6 +9,51 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+copy_overlay(){
+	msg2 "Copying ${1##*/} ..."
+	if [[ -L $1 ]];then
+		cp -a --no-preserve=ownership $1/* $2
+	else
+		cp -LR $1/* $2
+	fi
+}
+
+copy_startup_scripts(){
+	msg2 "Copying startup scripts ..."
+	cp ${DATADIR}/scripts/livecd $1
+	cp ${DATADIR}/scripts/mhwd-live $1
+	chmod +x $1/livecd
+	chmod +x $1/mhwd-live
+}
+
+write_profile_conf_entries(){
+	local conf=$1/profile.conf
+	echo '' >> ${conf}
+	echo '# custom image name' >> ${conf}
+	echo "custom=${custom}" >> ${conf}
+	echo '' >> ${conf}
+	echo '# iso_name' >> ${conf}
+	echo "iso_name=${iso_name}" >> ${conf}
+}
+
+copy_livecd_helpers(){
+	msg2 "Copying livecd helpers ..."
+	[[ ! -d $1 ]] && mkdir -p $1
+	cp ${LIBDIR}/util-livecd.sh $1
+	cp ${LIBDIR}/util-msg.sh $1
+	cp ${LIBDIR}/util.sh $1
+	cp ${DATADIR}/scripts/kbd-model-map $1
+
+	cp ${profile_conf} $1
+
+	write_profile_conf_entries $1
+}
+
+copy_cache_mhwd(){
+	msg2 "Copying mhwd package cache ..."
+	rsync -v --files-from="$1/cache-packages.txt" /var/cache/pacman/pkg "$1/opt/livecd/pkgs"
+}
+
 gen_pw(){
 	echo $(perl -e 'print crypt($ARGV[0], "password")' ${password})
 }
@@ -89,7 +134,7 @@ configure_lsb(){
 configure_services(){
 	case ${initsys} in
 		'openrc')
-			msg3 "Congiguring [${initsys}] ...."
+			msg3 "Configuring [${initsys}] ...."
 			for svc in ${start_openrc[@]}; do
 				msg2 "Setting $svc ..."
 				chroot $1 rc-update add $svc default &> /dev/null
@@ -97,7 +142,7 @@ configure_services(){
 			msg3 "Done configuring [${initsys}]"
 		;;
 		'systemd')
-			msg3 "Congiguring [${initsys}] ...."
+			msg3 "Configuring [${initsys}] ...."
 			for svc in ${start_systemd[@]}; do
 				msg2 "Setting $svc ..."
 				chroot $1 systemctl enable $svc &> /dev/null
@@ -201,7 +246,7 @@ detect_desktop_env(){
 			default_desktop_file="fluxbox"
 			msg2 "Detected Fluxbox desktop environment"
 		elif [ -e "$1/usr/bin/dde-desktop" ] && [ -e "$1/usr/share/xsessions/deepin.desktop" ]; then
-			default_desktop_executable="dde-desktop"
+			default_desktop_executable="startdde"
 			default_desktop_file="deepin"
 			msg2 "Detected Deepin desktop environment"
 		else
@@ -412,7 +457,7 @@ configure_livecd_image(){
 }
 
 make_repo(){
-	repo-add ${work_dir}/mhwd-image/opt/livecd/pkgs/gfx-pkgs.db.tar.gz ${work_dir}/mhwd-image/opt/livecd/pkgs/*pkg*z
+	repo-add $1/opt/livecd/pkgs/gfx-pkgs.db.tar.gz $1/opt/livecd/pkgs/*pkg*z
 }
 
 # $1: work dir

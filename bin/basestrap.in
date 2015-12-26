@@ -12,7 +12,7 @@ version=@version@
 
 shopt -s extglob
 
-PKGDATADIR='@pkgdatadir@'
+DATADIR='@datadir@'
 LIBDIR='@libdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh

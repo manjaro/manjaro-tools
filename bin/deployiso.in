@@ -17,15 +17,14 @@ SYSCONFDIR='@sysconfdir@'
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
 
 import ${LIBDIR}/util.sh
-import ${LIBDIR}/util-iso.sh
 import ${LIBDIR}/util-publish.sh
 
 show_profile(){
-	cd $1
-		load_profile "$1"
-		msg2 "cache_dir_iso: ${cache_dir_iso}"
-		msg2 "remote_tree: ${remote_tree}"
-	cd ..
+	eval_edition "$1"
+	msg3 "Iso: [$1]"
+	prepare_transfer "$1"
+	msg2 "src_dir: ${src_dir}"
+	msg2 "remote_dir: ${remote_dir}"
 }
 
 display_settings(){
@@ -34,7 +33,7 @@ display_settings(){
 
 	msg "PROFILE:"
 	msg2 "sets_dir_iso: ${sets_dir_iso}"
-	msg2 "buildsets: $(load_sets ${sets_dir_iso})"
+	msg2 "buildsets: $(list_sets ${sets_dir_iso})"
 	msg2 "buildset_iso: ${buildset_iso}"
 	msg2 "is_buildset: ${is_buildset}"
 
@@ -63,8 +62,10 @@ display_settings(){
 
 load_user_info
 
-load_config "${USER_CONFIG}/manjaro-tools.conf"
+load_config "${USERCONFDIR}/manjaro-tools.conf"
 load_config "${SYSCONFDIR}/manjaro-tools.conf"
+
+run_dir=${cache_dir_iso}
 
 pretend=false
 remote_create=false
@@ -108,7 +109,7 @@ shift $(($OPTIND - 1))
 
 timer_start=$(get_timer)
 
-eval_buildset "${buildset_iso}" "${sets_dir_iso}"
+eval_buildset "${sets_dir_iso}" "${buildset_iso}"
 
 rsync_args+=(--bwlimit=${limit})
 
