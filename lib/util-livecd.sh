@@ -364,9 +364,9 @@ configure_sudo(){
 configure_env(){
 	# avoid xdg-open loop in i3 and fluxbox
 	if [ ! -e "/usr/bin/i3" ] && [ ! -e "/usr/bin/fluxbox" ] ; then
-	echo "BROWSER=/usr/bin/xdg-open" >> /etc/environment
-	echo "BROWSER=/usr/bin/xdg-open" >> /etc/skel/.bashrc
-	echo "BROWSER=/usr/bin/xdg-open" >> /etc/profile
+		echo "BROWSER=/usr/bin/xdg-open" >> /etc/environment
+		echo "BROWSER=/usr/bin/xdg-open" >> /etc/skel/.bashrc
+		echo "BROWSER=/usr/bin/xdg-open" >> /etc/profile
 	fi
 
 	# add TERM var
