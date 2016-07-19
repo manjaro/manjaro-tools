@@ -179,6 +179,10 @@ make_checksum(){
 	cd ..
 }
 
+actual_branch(){
+	echo $(grep "Branch =" "${chroots_iso}/${profile}/${target_arch}/root-image/etc/pacman-mirrors.conf" | cut -f3 -d ' ')
+}
+
 gen_iso_fn(){
 	local vars=() name
 	vars+=("${iso_name}")
@@ -186,7 +190,7 @@ gen_iso_fn(){
 # 	[[ ${edition} == 'community' ]] && vars+=("${edition}")
 	[[ ${initsys} == 'openrc' ]] && vars+=("${initsys}")
 	vars+=("${dist_release}")
-	vars+=("${target_branch}")
+	vars+=("$(actual_branch)")
 	vars+=("${target_arch}")
 	for n in ${vars[@]};do
 		name=${name:-}${name:+-}${n}
