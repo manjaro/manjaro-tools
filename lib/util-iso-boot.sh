@@ -64,7 +64,7 @@ copy_efi_loaders(){
     if [[ -f $1/usr/lib/systemd/boot/efi/systemd-bootx64.efi ]] ; then
         cp $1/usr/lib/systemd/boot/efi/systemd-bootx64.efi $2/loader.efi
     else
-        cp $1/usr/share/efitools/efi/Loader.efi $2/loader.efi
+        cp $1/usr/share/efi-utils/gummibootx64.efi $2/loader.efi
     fi
 }
 
