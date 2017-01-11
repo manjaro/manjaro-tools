@@ -155,7 +155,7 @@ write_users_conf(){
     echo "autologinGroup:  autologin" >> "$conf"
     echo "doAutologin:     false" >> "$conf"
     echo "sudoersGroup:    wheel" >> "$conf"
-    echo "setRootPassword: false" >> "$conf"
+    echo "setRootPassword: true" >> "$conf"
     echo "availableShells: /bin/bash, /bin/zsh" >> "$conf"
 }
 
