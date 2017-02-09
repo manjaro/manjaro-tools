@@ -136,8 +136,8 @@ show_elapsed_time(){
 get_project(){
     local project
     case "$1" in
-        'community') project='manjarolinux-community' ;;
-        'manjaro') project='manjarolinux' ;;
+        'community') [[ "${dist_release}" =~ [a-z] ]] && project='manjarotest-community' || project='manjarolinux-community' ;;
+        'manjaro') [[ "${dist_release}" =~ [a-z] ]] && project='manjarotest' || project='manjarolinux' ;;
         'sonar') project='sonargnulinux' ;;
     esac
     echo ${project}
