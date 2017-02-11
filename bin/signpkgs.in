@@ -12,3 +12,4 @@
 version=@version@
 
 find $PWD -maxdepth 1 -name '*.pkg.tar.xz' -exec signfile {} \;
+find $PWD -maxdepth 1 -name '*.iso' -exec signfile {} \;
