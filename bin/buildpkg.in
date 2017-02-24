@@ -43,7 +43,7 @@ display_settings(){
 
     msg "OPTIONS:"
     msg2 "arch: %s" "${target_arch}"
-    msg2 "branch: %s" "${target_branch}"
+    msg2 "branch: %s" "${target_branch_pkg}"
     msg2 "chroots_pkg: %s" "${chroots_pkg}"
 
 
@@ -86,7 +86,7 @@ usage() {
     echo "Usage: ${0##*/} [options]"
     echo "    -p <pkg>           Build list or pkg [default: ${build_list_pkg}]"
     echo "    -a <arch>          Arch [default: ${target_arch}]"
-    echo "    -b <branch>        Branch [default: ${target_branch}]"
+    echo "    -b <branch>        Branch [default: ${target_branch_pkg}]"
     echo '    -r <dir>           Chroots directory'
     echo "                       [default: ${chroots_pkg}]"
     echo '    -i <pkgs>          Install packages into the working copy of the chroot'
@@ -110,7 +110,7 @@ while getopts "${opts}" arg; do
     case "${arg}" in
         p) build_list_pkg="$OPTARG" ;;
         a) target_arch="$OPTARG" ;;
-        b) target_branch="$OPTARG" ;;
+        b) target_branch_pkg="$OPTARG" ;;
         r) chroots_pkg="$OPTARG" ;;
         i) install_pkgs+=("$OPTARG"); mkchrootpkg_args+=(-I ${install_pkgs[*]}) ;;
         c) clean_first=true ;;
@@ -134,9 +134,9 @@ prepare_dir "${tmp_dir}"
 
 prepare_conf "${target_arch}"
 
-mirrors_conf=$(get_pac_mirrors_conf "${target_branch}")
+mirrors_conf=$(get_pac_mirrors_conf "${target_branch_pkg}")
 
-mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${target_branch}")
+mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B "${build_mirror}/${target_branch_pkg}")
 
 mkchrootpkg_args+=(-r ${work_dir})
 

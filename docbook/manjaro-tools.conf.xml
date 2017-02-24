@@ -68,12 +68,20 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
         <variablelist>
             <varlistentry>
-                <term><varname>target_branch=</varname></term>
+                <term><varname>target_branch_iso=</varname></term>
 
                 <listitem><para>Takes <option>stable</option> (the default),
                 <option>testing</option> or <option>unstable</option>. It defines
-                against which repository will be used when compilling packages
-                with buildpkg.
+                which repository will be used when building ISOs with buildiso.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><varname>target_branch_pkg=</varname></term>
+
+                <listitem><para>Takes <option>unstable</option> (the default),
+                <option>testing</option> or <option>stable</option>. It defines
+                against which repository packages will be compiled with buildpkg.
                 </para></listitem>
             </varlistentry>
 

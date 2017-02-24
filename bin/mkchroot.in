@@ -105,6 +105,11 @@ else
     "${cache_dirs[@]/#/--cachedir=}" "$@" || die 'Failed to install all packages'
 fi
 
+trackfile="${log_dir}/fs_tracknr"
+fs_count="$(cat ${trackfile})"
+fs_count="$(let $fs_count++)"
+echo "$(date) - ${fs_count}" > "${working_dir}/.timestamp"
+echo "${fs_count} - ${working_dir}" > "${trackfile}"
 echo "$version" > "$working_dir/.manjaro-tools"
 
 if ${build_locales};then

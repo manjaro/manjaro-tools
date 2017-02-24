@@ -53,8 +53,11 @@ overriding
 ################ manjaro-tools.conf ##################
 ######################################################
 
-# default target branch
-# target_branch=stable
+# default branch for building ISOs
+# target_branch_iso=stable
+
+# default branch for building pkgs
+# target_branch_pkg=unstable
 
 # default taget arch: auto detect
 # target_arch=$(uname -m)

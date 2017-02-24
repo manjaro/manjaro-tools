@@ -71,7 +71,7 @@ display_settings(){
 
     msg "OPTIONS:"
     msg2 "arch: %s" "${target_arch}"
-    msg2 "branch: %s" "${target_branch}"
+    msg2 "branch: %s" "${target_branch_iso}"
     msg2 "initsys: %s" "${initsys}"
     msg2 "kernel: %s" "${kernel}"
     [[ -n ${gpgkey} ]] && msg2 "gpgkey: %s" "${gpgkey}"
@@ -115,7 +115,7 @@ usage() {
     echo "Usage: ${0##*/} [options]"
     echo "    -p <profile>       Buildset or profile [default: ${build_list_iso}]"
     echo "    -a <arch>          Arch [default: ${target_arch}]"
-    echo "    -b <branch>        Branch [default: ${target_branch}]"
+    echo "    -b <branch>        Branch [default: ${target_branch_iso}]"
     echo '    -r <dir>           Chroots directory'
     echo "                       [default: ${chroots_iso}]"
     echo '    -t <dir>           Target directory'
@@ -147,7 +147,7 @@ while getopts "${opts}" arg; do
     case "${arg}" in
         p) build_list_iso="$OPTARG" ;;
         a) target_arch="$OPTARG" ;;
-        b) target_branch="$OPTARG" ;;
+        b) target_branch_iso="$OPTARG" ;;
         r) chroots_iso="$OPTARG" ;;
         t) cache_dir_iso="$OPTARG" ;;
         k) kernel="$OPTARG" ;;

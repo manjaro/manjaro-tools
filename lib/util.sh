@@ -199,7 +199,9 @@ set_branch(){
 }
 
 init_common(){
-    [[ -z ${target_branch} ]] && target_branch='stable'
+    [[ -z ${target_branch_iso} ]] && target_branch_iso='stable'
+    
+    [[ -z ${target_branch_pkg} ]] && target_branch_pkg='unstable'
 
     [[ -z ${target_arch} ]] && target_arch=$(uname -m)
 
@@ -301,7 +303,7 @@ init_buildiso(){
 
     [[ -z ${dist_release} ]] && dist_release=$(get_release)
 
-    dist_codename=$(get_codename)
+    [[ -z ${dist_codename} ]] && dist_codename=$(get_codename)
 
     dist_name=$(get_distname)
 
@@ -466,9 +468,7 @@ load_profile_config(){
 
     [[ -z ${chrootcfg} ]] && chrootcfg='false'
 
-    #[[ -z ${netgroups} ]] && -- needs to be hardcoded for now, until a standard has been established
-    # will be unlocked again after everything has been established.
-    netgroups="https://raw.githubusercontent.com/manjaro/calamares-netgroups/master"
+    [[ -z ${netgroups} ]] && netgroups="https://raw.githubusercontent.com/manjaro/calamares-netgroups/master"
 
     [[ -z ${geoip} ]] && geoip='true'
 

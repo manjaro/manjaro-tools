@@ -249,13 +249,13 @@ copy_from_cache(){
     chroot-run \
         -r "${mountargs_ro}" \
         -w "${mountargs_rw}" \
-        -B "${build_mirror}/${target_branch}" \
+        -B "${build_mirror}/${target_branch_iso}" \
         "$1" \
         pacman -v -Syw $2 --noconfirm || return 1
     chroot-run \
         -r "${mountargs_ro}" \
         -w "${mountargs_rw}" \
-        -B "${build_mirror}/${target_branch}" \
+        -B "${build_mirror}/${target_branch_iso}" \
         "$1" \
         pacman -v -Sp $2 --noconfirm > "$list"
     sed -ni '/.pkg.tar.xz/p' "$list"
