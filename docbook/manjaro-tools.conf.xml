@@ -119,13 +119,6 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
                 </para></listitem>
             </varlistentry>
 
-            <!--<varlistentry>
-                <term><varname>host=</varname></term>
-
-                <listitem><para>Default url to be used for upload.
-                </para></listitem>
-            </varlistentry>-->
-
         </variablelist>
     </refsect1>
 
@@ -249,6 +242,13 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
                 <term><varname>account=</varname></term>
 
                 <listitem><para>Default user to be used for upload.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><varname>project=</varname></term>
+
+                <listitem><para>Default SF project name to be used for upload.
                 </para></listitem>
             </varlistentry>
 
