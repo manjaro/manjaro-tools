@@ -315,7 +315,7 @@ init_buildiso(){
 
     [[ -z ${kernel} ]] && kernel="linux49"
 
-    [[ -z ${use_overlayfs} ]] && use_overlayfs='true'
+    use_overlayfs='true'
 
     [[ -z ${gpgkey} ]] && gpgkey=''
 
@@ -423,7 +423,7 @@ load_profile_config(){
     [[ -z ${login_shell} ]] && login_shell='/bin/bash'
 
     if [[ -z ${addgroups} ]];then
-        addgroups="video,power,storage,optical,network,lp,scanner,wheel"
+        addgroups="video,power,storage,optical,network,lp,scanner,wheel,sys"
     fi
 
     if [[ -z ${enable_systemd[@]} ]];then
