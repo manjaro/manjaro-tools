@@ -76,7 +76,6 @@ SHARED_ISO = \
 
 CPIOHOOKS = \
 	initcpio/hooks/miso \
-	initcpio/hooks/miso_aufs \
 	initcpio/hooks/miso_loop_mnt \
 	initcpio/hooks/miso_pxe_common \
 	initcpio/hooks/miso_pxe_http \
@@ -86,7 +85,6 @@ CPIOHOOKS = \
 
 CPIOINST = \
 	initcpio/install/miso \
-	initcpio/install/miso_aufs \
 	initcpio/install/miso_loop_mnt \
 	initcpio/install/miso_pxe_common \
 	initcpio/install/miso_pxe_http \
