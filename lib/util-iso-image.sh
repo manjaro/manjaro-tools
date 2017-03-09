@@ -20,26 +20,6 @@ copy_overlay(){
     fi
 }
 
-track_img() {
-    info "mount: [%s]" "$2"
-    mount "$@" && IMG_ACTIVE_MOUNTS=("$2" "${IMG_ACTIVE_MOUNTS[@]}")
-}
-
-mount_img() {
-    IMG_ACTIVE_MOUNTS=()
-    mkdir -p "$2"
-    track_img "$1" "$2"
-}
-
-umount_img() {
-    if [[ -n ${IMG_ACTIVE_MOUNTS[@]} ]];then
-        info "umount: [%s]" "${IMG_ACTIVE_MOUNTS[@]}"
-        umount "${IMG_ACTIVE_MOUNTS[@]}"
-        unset IMG_ACTIVE_MOUNTS
-        rm -r "$1"
-    fi
-}
-
 add_svc_rc(){
     if [[ -f $1/etc/init.d/$2 ]];then
         msg2 "Setting %s ..." "$2"

@@ -175,7 +175,7 @@ prepare_dir "${tmp_dir}"
 eval_build_list "${list_dir_iso}" "${build_list_iso}"
 
 import ${LIBDIR}/util-iso.sh
-import ${LIBDIR}/util-iso-overlayfs.sh
+import ${LIBDIR}/util-iso-mount.sh
 
 check_requirements
 
