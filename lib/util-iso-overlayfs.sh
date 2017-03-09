@@ -10,7 +10,7 @@
 # GNU General Public License for more details.
 
 track_fs() {
-    info "%s mount: [%s]" "${iso_fs}" "$5"
+    info "overlayfs mount: [%s]" "$5"
     mount "$@" && FS_ACTIVE_MOUNTS=("$5" "${FS_ACTIVE_MOUNTS[@]}")
 }
 
@@ -41,7 +41,7 @@ mount_fs_net(){
 
 umount_fs(){
     if [[ -n ${FS_ACTIVE_MOUNTS[@]} ]];then
-        info "%s umount: [%s]" "${iso_fs}" "${FS_ACTIVE_MOUNTS[@]}"
+        info "overlayfs umount: [%s]" "${FS_ACTIVE_MOUNTS[@]}"
         umount "${FS_ACTIVE_MOUNTS[@]}"
         unset FS_ACTIVE_MOUNTS
         rm -rf "${mnt_dir}/work"

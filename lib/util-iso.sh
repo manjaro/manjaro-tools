@@ -448,17 +448,10 @@ check_requirements(){
     fi
 
     local iso_kernel=${kernel:5:1} host_kernel=$(uname -r)
-
-    if [[ ${iso_kernel} < "4" ]] || [[ ${host_kernel%%*.} < "4" ]];then
-        use_overlayfs='false'
+    if [[ ${iso_kernel} < "4" ]] \
+    || [[ ${host_kernel%%*.} < "4" ]];then
+        die "The host and iso kernels must be version>=4.0!"
     fi
-
-    if ${use_overlayfs};then
-        iso_fs="overlayfs"
-    else
-        iso_fs="aufs"
-    fi
-    import ${LIBDIR}/util-iso-${iso_fs}.sh
 }
 
 compress_images(){

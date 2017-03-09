@@ -88,7 +88,6 @@ display_settings(){
 
     msg "ISO INFO:"
     msg2 "iso_label: %s" "${iso_label}"
-    msg2 "iso_fs: %s" "${iso_fs}"
 
     msg "BUILD QUEUE:"
     run show_profile "${build_list_iso}"
@@ -176,6 +175,7 @@ prepare_dir "${tmp_dir}"
 eval_build_list "${list_dir_iso}" "${build_list_iso}"
 
 import ${LIBDIR}/util-iso.sh
+import ${LIBDIR}/util-iso-overlayfs.sh
 
 check_requirements
 

@@ -64,7 +64,6 @@ BIN_ISO = \
 
 LIBS_ISO = \
 	lib/util-iso.sh \
-	lib/util-iso-aufs.sh \
 	lib/util-iso-overlayfs.sh \
 	lib/util-iso-image.sh \
 	lib/util-iso-boot.sh \

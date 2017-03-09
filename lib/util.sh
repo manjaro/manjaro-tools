@@ -315,8 +315,6 @@ init_buildiso(){
 
     [[ -z ${kernel} ]] && kernel="linux49"
 
-    use_overlayfs='true'
-
     [[ -z ${gpgkey} ]] && gpgkey=''
 
     mhwd_repo="/opt/pkg"
