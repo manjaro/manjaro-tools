@@ -1,4 +1,4 @@
-Version=0.14.0
+Version=0.15.0
 
 PREFIX = /usr/local
 SYSCONFDIR = /etc
@@ -32,9 +32,6 @@ ARCH_CONF = \
 	data/make.conf.d/i686.conf \
 	data/make.conf.d/x86_64.conf \
 	data/make.conf.d/multilib.conf
-# 	data/make.conf.d/aarch64.conf \
-# 	data/make.conf.d/armv6h.conf \
-# 	data/make.conf.d/armv7h.conf
 
 BIN_PKG = \
 	bin/checkpkg \
@@ -185,14 +182,6 @@ install_iso:
 
 	install -dm0755 $(DESTDIR)$(PREFIX)/lib/manjaro-tools
 	install -m0644 ${LIBS_ISO} $(DESTDIR)$(PREFIX)/lib/manjaro-tools
-
-# 	install -dm0755 $(DESTDIR)$(PREFIX)/lib/initcpio/hooks
-# 	install -m0755 ${CPIOHOOKS} $(DESTDIR)$(PREFIX)/lib/initcpio/hooks
-#
-# 	install -dm0755 $(DESTDIR)$(PREFIX)/lib/initcpio/install
-# 	install -m0755 ${CPIOINST} $(DESTDIR)$(PREFIX)/lib/initcpio/install
-
-# 	install -m0755 ${CPIO} $(DESTDIR)$(PREFIX)/lib/initcpio
 
 	install -dm0755 $(DESTDIR)$(SYSCONFDIR)/initcpio/hooks
 	install -m0755 ${CPIOHOOKS} $(DESTDIR)$(SYSCONFDIR)/initcpio/hooks
