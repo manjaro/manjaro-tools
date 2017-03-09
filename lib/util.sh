@@ -506,8 +506,7 @@ reset_profile(){
 }
 
 check_profile(){
-    local keyfiles=("${profile_dir}/mkinitcpio.conf"
-            "${profile_dir}/Packages-Root"
+    local keyfiles=("${profile_dir}/Packages-Root"
             "${profile_dir}/Packages-Live")
 
     local keydirs=("${profile_dir}/root-overlay"
