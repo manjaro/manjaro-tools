@@ -71,6 +71,7 @@ LIBS_ISO = \
 
 SHARED_ISO = \
 	data/pacman-mhwd.conf \
+	data/mkinitcpio.conf \
 	data/profile.conf.example
 
 CPIOHOOKS = \

@@ -361,7 +361,7 @@ make_image_boot() {
         fi
 
         prepare_initcpio "${path}"
-        prepare_initramfs "${profile_dir}" "${path}"
+        prepare_initramfs "${path}"
 
         mv ${path}/boot/initramfs.img ${boot}/${target_arch}/initramfs.img
         prepare_boot_extras "${path}" "${boot}"
