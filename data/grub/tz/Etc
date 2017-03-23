@@ -1,0 +1,7 @@
+for tz in UTC; do
+  menuentry --class=tz.Etc.${tz} "Etc/${tz}" {
+    timezone="tz=${1}"
+    def_timezone="${1}"
+    menu_reload
+  }
+done

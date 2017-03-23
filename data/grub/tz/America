@@ -1,0 +1,7 @@
+for tz in Antigua Argentina Aruba Asuncion Bogota Caracas Costa_Rica El_Salvador Guatemala Guayaquil La_Paz Lima Managua Mexico_City Montevideo New_York Panama Puerto_Rico Santiago Santo_Domingo Sao_Paulo Tegucigalpa Toronto; do
+  menuentry --class=tz.America.${tz} "America/${tz}" {
+    timezone="tz=${1}"
+    def_timezone="${1}"
+    menu_reload
+  }
+done

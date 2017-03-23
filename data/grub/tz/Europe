@@ -1,0 +1,7 @@
+for tz in Amsterdam Athens Berlin Bratislava Brussels Bucharest Budapest Copenhagen Dublin Helsinki Istanbul Kiev Lisbon Ljubljana London Luxembourg Madrid Minsk Moscow Oslo Paris Prague Rome Sarajevo Sofia Stockholm Tallinn Vaduz Vienna Warsaw Zagreb Zurich; do
+  menuentry --class=tz.Europe.${tz} "Europe/${tz}" {
+    timezone="tz=${1}"
+    def_timezone="${1}"
+    menu_reload
+  }
+done

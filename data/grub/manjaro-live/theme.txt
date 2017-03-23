@@ -1,0 +1,42 @@
+message-font: "u_vga16 16"
+message-color: "#fff"
+message-bg-color: "#000"
+terminal-font: "u_vga16 16"
+desktop-image: "background.png"
+title-text: ""
+
++ boot_menu {
+	left = 15%
+	top = 20%
+	width = 75%
+	height = 60%
+	item_font = "u_vga16 16"
+	item_color = "#ddd"
+	selected_item_font = "u_vga16 16"
+	selected_item_color= "#f70"
+	selected_item_pixmap_style= "highlight_*.png"
+	icon_height = 28
+	icon_width = 28
+	item_height = 32
+	item_padding = 0
+	item_icon_space = 32
+	item_spacing = 0
+	scrollbar = true
+	scrollbar_width = 32
+	scrollbar_thumb = "slider_*.png"
+	menu_pixmap_style = "menu_*.png"
+}
+
++ image {
+	left = 0%
+	top = 84%
+        width=100%
+	file = "logo.png"
+}
+
++ image {
+        left = 17%
+        top = 15%
+        file = "userpass.png"
+}
+

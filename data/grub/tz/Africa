@@ -1,0 +1,7 @@
+for tz in Gaborone Harare Johannesburg Lagos; do
+  menuentry --class=tz.Africa.${tz} "Africa/${tz}" {
+    timezone="tz=${1}"
+    def_timezone="${1}"
+    menu_reload
+  }
+done

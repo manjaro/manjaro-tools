@@ -52,91 +52,318 @@ prepare_boot_extras(){
     cp $1/usr/share/licenses/common/GPL2/license.txt $2/memtest.COPYING
 }
 
-prepare_efiboot_image(){
-    local efi=$1/EFI/miso boot=$2/${iso_name}/boot
-    prepare_dir "${efi}"
-    cp ${boot}/x86_64/vmlinuz ${efi}/vmlinuz.efi
-    cp ${boot}/x86_64/initramfs.img ${efi}/initramfs.img
-    if [[ -f ${boot}/intel_ucode.img ]] ; then
-        cp ${boot}/intel_ucode.img ${efi}/intel_ucode.img
-    fi
-}
-
 vars_to_boot_conf(){
     sed -e "s|@ISO_NAME@|${iso_name}|g" \
         -e "s|@ISO_LABEL@|${iso_label}|g" \
         -e "s|@DIST_NAME@|${dist_name}|g" \
         -e "s|@ARCH@|${target_arch}|g" \
-        -e "s|@DRV@|$2|g" \
-        -e "s|@SWITCH@|$3|g" \
-        -e "s|@BOOT_ARGS@||g" \
         -i $1
 }
 
-prepare_efi_loader(){
-    local efi_data=$1/usr/share/efi-utils efi=$2/EFI/boot
-    msg2 "Preparing efi loaders ..."
-    prepare_dir "${efi}"
-    cp $1/usr/share/efitools/efi/PreLoader.efi ${efi}/bootx64.efi
-    cp $1/usr/share/efitools/efi/HashTool.efi ${efi}
-    cp ${efi_data}/gummibootx64.efi ${efi}/loader.efi
-    cp ${efi_data}/shellx64_v{1,2}.efi $2/EFI
+assemble_iso(){
+    msg "Creating ISO image..."
+    local iso_publisher iso_app_id
 
-    local entries=$2/loader/entries
-    msg2 "Preparing efi loader config ..."
-    prepare_dir "${entries}"
+    iso_publisher="$(get_osname) <$(get_disturl)>"
 
-    cp ${efi_data}/loader.conf $2/loader/loader.conf
-    vars_to_boot_conf $2/loader/loader.conf
-    cp ${efi_data}/uefi-shell-v{1,2}-x86_64.conf ${entries}
-
-    local label='free' switch="no"
-    cp ${efi_data}/entry-x86_64-$3.conf ${entries}/${iso_name}-x86_64.conf
-    vars_to_boot_conf "${entries}/${iso_name}-x86_64.conf" "$label" "$switch"
-    if ${nonfree_mhwd};then
-        label='nonfree' switch="yes"
-        cp ${efi_data}/entry-x86_64-$3.conf ${entries}/${iso_name}-x86_64-nonfree.conf
-        vars_to_boot_conf "${entries}/${iso_name}-x86_64-nonfree.conf" "$label" "$switch"
-    fi
+    iso_app_id="$(get_osname) Live/Rescue CD"
+    
+    xorriso -as mkisofs \
+        --protective-msdos-label \
+        -volid "${iso_label}" \
+        -appid "${iso_app_id}" \
+        -publisher "${iso_publisher}" \
+        -preparer "Prepared by manjaro-tools/${0##*/}" \
+        -e /efi.img \
+        -b boot/grub/i386-pc/eltorito.img \
+        -c boot.catalog \
+        -no-emul-boot \
+        -boot-load-size 4 \
+        -boot-info-table \
+        -graft-points \
+        --grub2-boot-info \
+        --grub2-mbr ${iso_root}/boot/grub/i386-pc/boot_hybrid.img \
+        --sort-weight 0 / --sort-weight 1 /boot \
+        -isohybrid-gpt-basdat \
+        -eltorito-alt-boot \
+        -output "${iso_dir}/${iso_file}" \
+        "${iso_root}/"
 }
 
-check_syslinux_select(){
-    local boot=${iso_root}/${iso_name}/boot
-    if [[ ! -f ${boot}/x86_64/vmlinuz ]] ; then
-        msg2 "Configuring syslinux for i686 architecture only ..."
-        sed -e "s/select.cfg/i686_inc.cfg/g" -i "$1/miso.cfg"
-    fi
-}
+prepare_grub(){
 
-check_syslinux_nonfree(){
-    msg2 "Configuring syslinux menu ..."
-    sed -e "/LABEL nonfree/,/^$/d" -i "$1/miso_sys_i686.cfg"
-    sed -e "/LABEL nonfree/,/^$/d" -i "$1/miso_sys_x86_64.cfg"
-    sed -e "/nonfree/ d" -i $1/syslinux.msg
-}
 
-prepare_isolinux(){
-    local syslinux=$1/usr/lib/syslinux/bios
-    msg2 "Copying isolinux binaries ..."
-    cp ${syslinux}/{{isolinux,isohdpfx}.bin,ldlinux.c32} $2
-    msg2 "Copying isolinux.cfg ..."
-    cp $1/usr/share/syslinux/isolinux/isolinux.cfg $2
-    vars_to_boot_conf "$2/isolinux.cfg"
-}
-
-prepare_syslinux(){
-    local syslinux=$1/usr/lib/syslinux/bios
-    msg2 "Copying syslinux binaries ..."
-    cp ${syslinux}/{*.c32,lpxelinux.0,memdisk} $2
-    msg2 "Copying syslinux theme ..."
-    syslinux=$1/usr/share/syslinux/theme
-    cp ${syslinux}/* $2
-    for conf in $2/*.cfg; do
-        vars_to_boot_conf "${conf}"
+    local src=i386-pc app='core.img' grub=$2/boot/grub efi=$2/efi/boot
+    [[ -d $2/boot ]] && rm -r $2/boot
+    [[ -d $2/efi ]] && rm -r $2/efi
+    [[ -f $2/efi.img ]] && rm $2/efi.img
+    prepare_dir ${grub}/${src}
+    
+    cp ${DATADIR}/grub/*.cfg ${grub}
+    
+    for cfg in ${grub}/*.cfg;do
+        vars_to_boot_conf "$cfg"
     done
-    # Check for dual-arch
-    check_syslinux_select "$2"
-    if ! ${nonfree_mhwd};then
-        check_syslinux_nonfree "$2"
-    fi
+    
+    cp $1/usr/lib/grub/${src}/* ${grub}/${src}
+    
+#     local mods=$(find ${grub}/${src} -name *.mod | sed -e 's|.*/||g' | sed -e 's|\.mod||g')
+    
+    local mods=(at_keyboard serial morse gfxterm mda_text spkmodem vga_text
+                acpi
+                backtrace
+                blocklist
+                boot
+                boottime
+                bsd
+                cacheinfo
+                cat
+                cbls
+                cbmemc
+                cbtime
+                chain
+                cmosdump
+                cmostest
+                cmp
+                configfile
+                cpuid
+                cryptodisk
+                date
+                drivemap
+                echo
+                efiemu
+                eval
+                file
+                font
+                freedos
+                functional_test
+                gdb
+                gettext
+                gfxmenu
+                gfxterm_background
+                gfxterm_menu
+                gptsync
+                halt
+                hashsum
+                hdparm
+                hello
+                help
+                hexdump
+                iorw
+                keylayouts
+                keystatus
+                legacycfg
+                linux
+                linux16
+                loadenv
+                loopback
+                ls
+                lsacpi
+                lsapm
+                lsmmap
+                lspci
+                macbless
+                memrw
+                minicmd
+                mmap
+                multiboot
+                multiboot2
+                nativedisk
+                net
+                normal
+                ntldr
+                parttool
+                password
+                password_pbkdf2
+                pcidump
+                plan9
+                play
+                probe
+                pxechain
+                random
+                read
+                reboot
+                regexp
+                search
+                search_fs_file
+                search_fs_uuid
+                search_label
+                sendkey
+                serial
+                setpci
+                sleep
+                syslinuxcfg
+                terminal
+                terminfo
+                test
+                test_blockarg
+                testload
+                testspeed
+                time
+                tr
+                true
+                truecrypt
+                usbtest
+                verify
+                videoinfo
+                videotest
+                xnu
+                xnu_uuid
+                zfscrypt
+                zfsinfo
+                iso9660
+                biosdisk)
+    
+    msg2 "Building %s ..." "${app}"
+     
+    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${grub}/${src}/core.img -O ${src} -p /boot/grub #${mods[@]}
+    
+    case ${target_arch} in 
+        'i686') 
+            src=i386-efi 
+            app=bootia32.efi
+        ;;
+        'x86_64')
+            src=x86_64-efi
+            app=bootx64.efi
+        ;;
+    esac
+    
+    prepare_dir ${efi}
+    prepare_dir ${grub}/${src}
+    
+#     mods+=()
+    mods=(at_keyboard serial morse gfxterm mda_text spkmodem cbmemc
+        acpi
+        appleldr
+        backtrace
+        blocklist
+        boot
+        boottime
+        bsd
+        cacheinfo
+        cat
+        cbls
+        cbmemc
+        cbtime
+        chain
+        cmp
+        configfile
+        cpuid
+        cryptodisk
+        date
+        echo
+        efifwsetup
+        eval
+        file
+        fixvideo
+        font
+        functional_test
+        gettext
+        gfxmenu
+        gfxterm_background
+        gfxterm_menu
+        gptsync
+        halt
+        hashsum
+        hdparm
+        hello
+        help
+        hexdump
+        iorw
+        keylayouts
+        keystatus
+        legacycfg
+        linux
+        linux16
+        loadbios
+        loadenv
+        loopback
+        ls
+        lsacpi
+        lsefi
+        lsefimmap
+        lsefisystab
+        lsmmap
+        lspci
+        lssal
+        macbless
+        memrw
+        minicmd
+        mmap
+        multiboot
+        multiboot2
+        nativedisk
+        net
+        normal
+        parttool
+        password
+        password_pbkdf2
+        pcidump
+        play
+        probe
+        random
+        read
+        reboot
+        regexp
+        search
+        search_fs_file
+        search_fs_uuid
+        search_label
+        serial
+        setpci
+        sleep
+        syslinuxcfg
+        terminal
+        terminfo
+        test
+        test_blockarg
+        testload
+        testspeed
+        time
+        tr
+        true
+        usbtest
+        verify
+        videoinfo
+        videotest
+        xnu
+        xnu_uuid
+        zfscrypt
+        zfsinfo
+        iso9660)
+    
+    cp $1/usr/lib/grub/${src}/* ${grub}/${src}
+    
+    msg2 "Building %s ..." "${app}"
+
+    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${efi}/${app} -O ${src} -p /boot/grub #${mods[@]} 
+    
+    prepare_dir ${grub}/themes
+    cp -r ${DATADIR}/grub/${iso_name}-live ${grub}/themes/
+    cp $1/usr/share/grub/unicode.pf2 ${grub}
+    cp -r ${DATADIR}/grub/{locales,tz} ${grub}
+    
+    local size=31M
+    local mnt="${mnt_dir}/efiboot" img="$2/efi.img"
+    msg2 "Creating fat image of %s ..." "${size}"
+    truncate -s ${size} "${img}"
+    mkfs.fat -n MISO_EFI "${img}" &>/dev/null
+    mkdir -p "${mnt}"
+    mount_img "${img}" "${mnt}"
+    
+    prepare_dir ${mnt}/efi/boot
+    
+    msg2 "Building %s ..." "${app}"
+#     mods=$(find ${grub}/${src} -name *.mod | sed -e 's|.*/||g' | sed -e 's|\.mod||g')
+    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${mnt}/efi/boot/${app} -O ${src} -p /boot/grub #${mods[@]}
+    
+    umount_img "${mnt}"
+    
+#     eltorito=$(mktemp /tmp/tmp.XXXXXXXXXX)
+#     embedded=$(mktemp /tmp/tmp.XXXXXXXXXX)
+    
+    
+    cat ${grub}/i386-pc/cdboot.img ${grub}/i386-pc/core.img > ${grub}/i386-pc/eltorito.img
+#     cat ${grub}/i386-pc/boot.img ${grub}/i386-pc/core.img > ${grub}/i386-pc/embedded.img
 }
