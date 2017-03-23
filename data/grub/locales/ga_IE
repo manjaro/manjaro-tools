@@ -1,9 +1,0 @@
-lang=ga
-bootlang="lang=ga_IE"
-def_bootlang="ga_IE"
-if [ -z "${keyboard}" ]; then
-  def_keyboard="ie"
-fi
-if [ -z "${timezone}" ]; then
-  def_timezone="Europe/Dublin"
-fi
