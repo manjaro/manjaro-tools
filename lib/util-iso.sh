@@ -341,13 +341,9 @@ make_image_mhwd() {
 }
 
 make_image_boot() {
-    #if [[ ! -e ${work_dir}/build.${FUNCNAME} ]]; then
+    if [[ ! -e ${work_dir}/build.${FUNCNAME} ]]; then
         msg "Prepare [/iso/boot]"
         local boot="${iso_root}/boot"
-        
-#         [[ -d ${iso_root}/boot ]] && rm -r ${iso_root}/boot
-#         [[ -d ${iso_root}/efi ]] && rm -r ${iso_root}/efi
-#         [[ -f ${iso_root}/efi.img ]] && rm ${iso_root}/efi.img
         
         mkdir -p ${boot}
 
@@ -371,22 +367,22 @@ make_image_boot() {
         umount_fs
 
         rm -R ${path}
-        #: > ${work_dir}/build.${FUNCNAME}
+        : > ${work_dir}/build.${FUNCNAME}
         msg "Done [/iso/boot]"
-    #fi
+    fi
 }
 
 make_grub(){
-    #if [[ ! -e ${work_dir}/build.${FUNCNAME} ]]; then
+    if [[ ! -e ${work_dir}/build.${FUNCNAME} ]]; then
         msg "Prepare [/iso/boot/grub]"
         
         local path="${work_dir}/rootfs"
         
         prepare_grub "${path}" "${iso_root}"
         
-        #: > ${work_dir}/build.${FUNCNAME}
+        : > ${work_dir}/build.${FUNCNAME}
         msg "Done [/iso/boot/grub]"
-    #fi
+    fi
 }
 
 check_requirements(){

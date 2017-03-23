@@ -61,24 +61,25 @@ vars_to_boot_conf(){
 }
 
 prepare_grub(){
-    local src=i386-pc app='core.img' grub=$2/boot/grub efi=$2/efi/boot
+    local src=i386-pc app='core.img' grub=$2/boot/grub efi=$2/efi/boot \
+        data=$1/usr/share/grub lib=$1/usr/lib/grub
     
     prepare_dir ${grub}/${src}
     
-    cp ${DATADIR}/grub/*.cfg ${grub}
+    cp ${data}/cfg/*.cfg ${grub}
     
-    for cfg in ${grub}/*.cfg;do
-        vars_to_boot_conf "$cfg"
-    done
+    vars_to_boot_conf "${grub}/grub.cfg"
     
-    cp $1/usr/lib/grub/${src}/* ${grub}/${src}
+    cp ${lib}/${src}/* ${grub}/${src}
     
     msg2 "Building %s ..." "${app}"
     
-    mods=(iso9660 normal extcmd boot bufio crypto gettext terminal multiboot configfile linux linux16)
+    local mods=(iso9660 normal extcmd boot bufio crypto gettext terminal multiboot configfile linux linux16)
      
     grub-mkimage -d ${grub}/${src} -o ${grub}/${src}/core.img -O ${src} -p /boot/grub biosdisk ${mods[@]}
-        
+
+    cat ${grub}/${src}/cdboot.img ${grub}/${src}/core.img > ${grub}/${src}/eltorito.img
+    
     case ${target_arch} in 
         'i686') 
             src=i386-efi 
@@ -93,19 +94,18 @@ prepare_grub(){
     prepare_dir ${efi}
     prepare_dir ${grub}/${src}
     
-    cp $1/usr/lib/grub/${src}/* ${grub}/${src}
+    cp ${lib}/${src}/* ${grub}/${src}
     
     msg2 "Building %s ..." "${app}"
 
     grub-mkimage -d ${grub}/${src} -o ${efi}/${app} -O ${src} -p /boot/grub ${mods[@]} 
     
     prepare_dir ${grub}/themes
-    cp -r ${DATADIR}/grub/${iso_name}-live ${grub}/themes/
-    cp $1/usr/share/grub/unicode.pf2 ${grub}
-    cp -r ${DATADIR}/grub/{locales,tz} ${grub}
+    cp -r ${data}/themes/${iso_name}-live ${grub}/themes/
+    cp ${data}/unicode.pf2 ${grub}
+    cp -r ${data}/{locales,tz} ${grub}
     
-    local size=31M
-    local mnt="${mnt_dir}/efiboot" img="$2/efi.img"
+    local size=8M mnt="${mnt_dir}/efiboot" img="$2/efi.img"
     msg2 "Creating fat image of %s ..." "${size}"
     truncate -s ${size} "${img}"
     mkfs.fat -n MISO_EFI "${img}" &>/dev/null
@@ -117,7 +117,5 @@ prepare_grub(){
     msg2 "Building %s ..." "${app}"
     grub-mkimage -d ${grub}/${src} -o ${mnt}/efi/boot/${app} -O ${src} -p /boot/grub ${mods[@]}
     
-    umount_img "${mnt}"  
-    
-    cat ${grub}/i386-pc/cdboot.img ${grub}/i386-pc/core.img > ${grub}/i386-pc/eltorito.img
+    umount_img "${mnt}"
 }
