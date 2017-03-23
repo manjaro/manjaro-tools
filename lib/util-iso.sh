@@ -159,6 +159,36 @@ make_sfs() {
     show_elapsed_time "${FUNCNAME}" "${timer_start}"
 }
 
+assemble_iso(){
+    msg "Creating ISO image..."
+    local iso_publisher iso_app_id
+
+    iso_publisher="$(get_osname) <$(get_disturl)>"
+
+    iso_app_id="$(get_osname) Live/Rescue CD"
+    
+    xorriso -as mkisofs \
+        --protective-msdos-label \
+        -volid "${iso_label}" \
+        -appid "${iso_app_id}" \
+        -publisher "${iso_publisher}" \
+        -preparer "Prepared by manjaro-tools/${0##*/}" \
+        -e /efi.img \
+        -b boot/grub/i386-pc/eltorito.img \
+        -c boot.catalog \
+        -no-emul-boot \
+        -boot-load-size 4 \
+        -boot-info-table \
+        -graft-points \
+        --grub2-boot-info \
+        --grub2-mbr ${iso_root}/boot/grub/i386-pc/boot_hybrid.img \
+        --sort-weight 0 / --sort-weight 1 /boot \
+        -isohybrid-gpt-basdat \
+        -eltorito-alt-boot \
+        -output "${iso_dir}/${iso_file}" \
+        "${iso_root}/"
+}
+
 # Build ISO
 make_iso() {
     msg "Start [Build ISO]"
@@ -314,6 +344,11 @@ make_image_boot() {
     #if [[ ! -e ${work_dir}/build.${FUNCNAME} ]]; then
         msg "Prepare [/iso/boot]"
         local boot="${iso_root}/boot"
+        
+#         [[ -d ${iso_root}/boot ]] && rm -r ${iso_root}/boot
+#         [[ -d ${iso_root}/efi ]] && rm -r ${iso_root}/efi
+#         [[ -f ${iso_root}/efi.img ]] && rm ${iso_root}/efi.img
+        
         mkdir -p ${boot}
 
         cp ${work_dir}/rootfs/boot/vmlinuz* ${boot}/vmlinuz-${target_arch}

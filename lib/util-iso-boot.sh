@@ -60,43 +60,9 @@ vars_to_boot_conf(){
         -i $1
 }
 
-assemble_iso(){
-    msg "Creating ISO image..."
-    local iso_publisher iso_app_id
-
-    iso_publisher="$(get_osname) <$(get_disturl)>"
-
-    iso_app_id="$(get_osname) Live/Rescue CD"
-    
-    xorriso -as mkisofs \
-        --protective-msdos-label \
-        -volid "${iso_label}" \
-        -appid "${iso_app_id}" \
-        -publisher "${iso_publisher}" \
-        -preparer "Prepared by manjaro-tools/${0##*/}" \
-        -e /efi.img \
-        -b boot/grub/i386-pc/eltorito.img \
-        -c boot.catalog \
-        -no-emul-boot \
-        -boot-load-size 4 \
-        -boot-info-table \
-        -graft-points \
-        --grub2-boot-info \
-        --grub2-mbr ${iso_root}/boot/grub/i386-pc/boot_hybrid.img \
-        --sort-weight 0 / --sort-weight 1 /boot \
-        -isohybrid-gpt-basdat \
-        -eltorito-alt-boot \
-        -output "${iso_dir}/${iso_file}" \
-        "${iso_root}/"
-}
-
 prepare_grub(){
-
-
     local src=i386-pc app='core.img' grub=$2/boot/grub efi=$2/efi/boot
-    [[ -d $2/boot ]] && rm -r $2/boot
-    [[ -d $2/efi ]] && rm -r $2/efi
-    [[ -f $2/efi.img ]] && rm $2/efi.img
+    
     prepare_dir ${grub}/${src}
     
     cp ${DATADIR}/grub/*.cfg ${grub}
@@ -107,117 +73,12 @@ prepare_grub(){
     
     cp $1/usr/lib/grub/${src}/* ${grub}/${src}
     
-#     local mods=$(find ${grub}/${src} -name *.mod | sed -e 's|.*/||g' | sed -e 's|\.mod||g')
-    
-    local mods=(at_keyboard serial morse gfxterm mda_text spkmodem vga_text
-                acpi
-                backtrace
-                blocklist
-                boot
-                boottime
-                bsd
-                cacheinfo
-                cat
-                cbls
-                cbmemc
-                cbtime
-                chain
-                cmosdump
-                cmostest
-                cmp
-                configfile
-                cpuid
-                cryptodisk
-                date
-                drivemap
-                echo
-                efiemu
-                eval
-                file
-                font
-                freedos
-                functional_test
-                gdb
-                gettext
-                gfxmenu
-                gfxterm_background
-                gfxterm_menu
-                gptsync
-                halt
-                hashsum
-                hdparm
-                hello
-                help
-                hexdump
-                iorw
-                keylayouts
-                keystatus
-                legacycfg
-                linux
-                linux16
-                loadenv
-                loopback
-                ls
-                lsacpi
-                lsapm
-                lsmmap
-                lspci
-                macbless
-                memrw
-                minicmd
-                mmap
-                multiboot
-                multiboot2
-                nativedisk
-                net
-                normal
-                ntldr
-                parttool
-                password
-                password_pbkdf2
-                pcidump
-                plan9
-                play
-                probe
-                pxechain
-                random
-                read
-                reboot
-                regexp
-                search
-                search_fs_file
-                search_fs_uuid
-                search_label
-                sendkey
-                serial
-                setpci
-                sleep
-                syslinuxcfg
-                terminal
-                terminfo
-                test
-                test_blockarg
-                testload
-                testspeed
-                time
-                tr
-                true
-                truecrypt
-                usbtest
-                verify
-                videoinfo
-                videotest
-                xnu
-                xnu_uuid
-                zfscrypt
-                zfsinfo
-                iso9660
-                biosdisk)
-    
     msg2 "Building %s ..." "${app}"
-     
-    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${grub}/${src}/core.img -O ${src} -p /boot/grub #${mods[@]}
     
+    mods=(iso9660 normal extcmd boot bufio crypto gettext terminal multiboot configfile linux linux16)
+     
+    grub-mkimage -d ${grub}/${src} -o ${grub}/${src}/core.img -O ${src} -p /boot/grub biosdisk ${mods[@]}
+        
     case ${target_arch} in 
         'i686') 
             src=i386-efi 
@@ -232,112 +93,11 @@ prepare_grub(){
     prepare_dir ${efi}
     prepare_dir ${grub}/${src}
     
-#     mods+=()
-    mods=(at_keyboard serial morse gfxterm mda_text spkmodem cbmemc
-        acpi
-        appleldr
-        backtrace
-        blocklist
-        boot
-        boottime
-        bsd
-        cacheinfo
-        cat
-        cbls
-        cbmemc
-        cbtime
-        chain
-        cmp
-        configfile
-        cpuid
-        cryptodisk
-        date
-        echo
-        efifwsetup
-        eval
-        file
-        fixvideo
-        font
-        functional_test
-        gettext
-        gfxmenu
-        gfxterm_background
-        gfxterm_menu
-        gptsync
-        halt
-        hashsum
-        hdparm
-        hello
-        help
-        hexdump
-        iorw
-        keylayouts
-        keystatus
-        legacycfg
-        linux
-        linux16
-        loadbios
-        loadenv
-        loopback
-        ls
-        lsacpi
-        lsefi
-        lsefimmap
-        lsefisystab
-        lsmmap
-        lspci
-        lssal
-        macbless
-        memrw
-        minicmd
-        mmap
-        multiboot
-        multiboot2
-        nativedisk
-        net
-        normal
-        parttool
-        password
-        password_pbkdf2
-        pcidump
-        play
-        probe
-        random
-        read
-        reboot
-        regexp
-        search
-        search_fs_file
-        search_fs_uuid
-        search_label
-        serial
-        setpci
-        sleep
-        syslinuxcfg
-        terminal
-        terminfo
-        test
-        test_blockarg
-        testload
-        testspeed
-        time
-        tr
-        true
-        usbtest
-        verify
-        videoinfo
-        videotest
-        xnu
-        xnu_uuid
-        zfscrypt
-        zfsinfo
-        iso9660)
-    
     cp $1/usr/lib/grub/${src}/* ${grub}/${src}
     
     msg2 "Building %s ..." "${app}"
 
-    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${efi}/${app} -O ${src} -p /boot/grub #${mods[@]} 
+    grub-mkimage -d ${grub}/${src} -o ${efi}/${app} -O ${src} -p /boot/grub ${mods[@]} 
     
     prepare_dir ${grub}/themes
     cp -r ${DATADIR}/grub/${iso_name}-live ${grub}/themes/
@@ -355,15 +115,9 @@ prepare_grub(){
     prepare_dir ${mnt}/efi/boot
     
     msg2 "Building %s ..." "${app}"
-#     mods=$(find ${grub}/${src} -name *.mod | sed -e 's|.*/||g' | sed -e 's|\.mod||g')
-    grub-mkimage -d ${grub}/${src} -c ${grub}/grub.cfg -o ${mnt}/efi/boot/${app} -O ${src} -p /boot/grub #${mods[@]}
+    grub-mkimage -d ${grub}/${src} -o ${mnt}/efi/boot/${app} -O ${src} -p /boot/grub ${mods[@]}
     
-    umount_img "${mnt}"
-    
-#     eltorito=$(mktemp /tmp/tmp.XXXXXXXXXX)
-#     embedded=$(mktemp /tmp/tmp.XXXXXXXXXX)
-    
+    umount_img "${mnt}"  
     
     cat ${grub}/i386-pc/cdboot.img ${grub}/i386-pc/core.img > ${grub}/i386-pc/eltorito.img
-#     cat ${grub}/i386-pc/boot.img ${grub}/i386-pc/core.img > ${grub}/i386-pc/embedded.img
 }
