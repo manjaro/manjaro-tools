@@ -5,7 +5,7 @@ Manjaro-tools-0.14
 
 User manual
 
-###1. manjaro-tools.conf
+### 1. manjaro-tools.conf
 
 manjaro-tools.conf is the central configuration file for manjaro-tools.
 By default, the config is installed in
@@ -124,14 +124,14 @@ overriding
 # iso_mirrors=('heanet' 'jaist' 'netcologne' 'iweb' 'kent')
 ~~~
 
-###2. buildpkg
+### 2. buildpkg
 
 buildpkg is the chroot build script of manjaro-tools.
 It it run in a abs/pkgbuilds directory which contains directories with PKGBUILD.
 
-######manjaro-tools.conf supports the makepkg.conf variables
+###### manjaro-tools.conf supports the makepkg.conf variables
 
-####Arguments
+#### Arguments
 
 ~~~
 $ buildpkg -h
@@ -154,7 +154,7 @@ Usage: buildpkg [options]
     -h                 This help
 ~~~
 
-######* build sysvinit package for both arches and branch testing:
+###### * build sysvinit package for both arches and branch testing:
 
 * i686(buildsystem is x86_64)
 
@@ -171,32 +171,32 @@ buildpkg -p sysvinit -b testing -cswn
 You can drop the branch arg if you set the branch in manjaro-tools.conf
 The arch can also be set in manjaro-tools.conf, but under normal conditions, it is better to specify the non native arch by -a parameter.
 
-######* -c
+###### * -c
 * Removes the chroot dir
 * If the -c parameter is not used, buildpkg will update the existing chroot or create a new one if none is present.
 
-######* -w
+###### * -w
 * Cleans pkgcache, and logfiles
 
-######* -s
+###### * -s
 * Signs the package when built
 
-######* -n
+###### * -n
 * Installs the built package in the chroot and runs a namcap check
 
-######* -u
+###### * -u
 * Create udev build root (for eudev builds)
 
-###3. buildiso
+### 3. buildiso
 
 buildiso is used to build manjaro-iso-profiles. It is run insde the profiles folder.
 
-#####Packages for livecd only:
+##### Packages for livecd only:
 
 * manjaro-livecd-openrc
 * manjaro-livecd-systemd
 
-####Arguments
+#### Arguments
 
 ~~~
 $ buildiso -h
@@ -224,7 +224,7 @@ Usage: buildiso [options]
     -h                 This help
 ~~~
 
-######* build xfce iso profile for both arches and branch testing on x86_64 build system
+###### * build xfce iso profile for both arches and branch testing on x86_64 build system
 
 * i686 (buildsystem is x86_64)
 
@@ -240,16 +240,16 @@ buildiso -p xfce -b testing
 
 The branch can be defined also in manjaro-tools.conf, but a manual parameter will always override conf settings.
 
-####Special parameters
+#### Special parameters
 
-######* -x
+###### * -x
 * Build images only
 * will stop after all packages have been installed. No iso sqfs compression will be executed
 
-######* -z
+###### * -z
 * Use this to sqfs compress the chroots if you previously used -x.
 
-###4. check-yaml
+### 4. check-yaml
 
 check-yaml can be used to write profile package lists to yaml.
 It is also possible to generate calamares conf file as buildiso would do.
@@ -268,7 +268,7 @@ Usage: check-yaml [options]
     -q                 Query settings
     -h                 This help
 ~~~
-######* build xfce iso profile for both arches and branch testing on x86_64 build system
+###### * build xfce iso profile for both arches and branch testing on x86_64 build system
 
 * i686 (buildsystem is x86_64)
 
@@ -288,19 +288,19 @@ check-yaml -p xfce -c
 check-yaml -p kdebase -gv
 ~~~
 
-####Special parameters
+#### Special parameters
 
-######* -c
+###### * -c
 * generate calamares module and settings conf files per profile
 
-######* -g
+###### * -g
 * generate a netgroup for specified pacman group
 
-###5. buildtree
+### 5. buildtree
 
 buildtree is a little tools to sync arch abs and manjaro PKGBUILD git repos.
 
-####Arguments
+#### Arguments
 
 ~~~
 $ buildtree -h
@@ -312,19 +312,19 @@ Usage: buildtree [options]
     -h            This help
 ~~~
 
-######* sync arch and manjaro trees
+###### * sync arch and manjaro trees
 
 ~~~
 buildtree -as
 ~~~
 
-###6. manjaro-chroot
+### 6. manjaro-chroot
 
 manjaro-chroot is a little tool to quickly chroot into a second system installed on the host.
 If the automount option is enabled, manjaro-chroot will detect installed systems with os-prober, and pops up a list with linux systems to select from.
 If there is only 1 system installed besides the host system, no list will pop up and it will automatically mount the second system.
 
-####Arguments
+#### Arguments
 
 ~~~
 $ manjaro-chroot -h
@@ -339,26 +339,26 @@ usage: manjaro-chroot -a [or] manjaro-chroot chroot-dir [command]
     and /build/manjaro-tools/manjaro-chroot.
 ~~~
 
-######* automount
+###### * automount
 
 ~~~
 manjaro-chroot -a
 ~~~
 
-######* mount manually
+###### * mount manually
 
 ~~~
 manjaro-chroot /mnt /bin/bash
 ~~~
 
-###7. deployiso
+### 7. deployiso
 
 deployiso is a script to upload a specific iso or a buiildset to SF.
 It needs to be run inside the iso-profiles directory.
 
 Ideally, you have a running ssh agent on the host, and your key added, and your public key provided to your SF account. You can then upload without being asked for ssh password.
 
-####Arguments
+#### Arguments
 
 ~~~
 $ deployiso -h
@@ -373,13 +373,13 @@ Usage: deployiso [options]
     -h                 This help
 ~~~
 
-######* upload official build list, ie all built iso defined in a build list
+###### * upload official build list, ie all built iso defined in a build list
 
 ~~~
 deployiso -p official -c
 ~~~
 
-######* upload xfce
+###### * upload xfce
 
 ~~~
 deployiso -p xfce -c
