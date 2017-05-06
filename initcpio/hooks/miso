@@ -237,6 +237,8 @@ miso_mount_handler() {
 
     if [[ "${copytoram}" == "y" ]]; then
         umount -d /run/miso/bootmnt
+        mkdir -p /run/miso/bootmnt/${misobasedir}/${arch}
+        mount -o bind /run/miso/copytoram /run/miso/bootmnt/${misobasedir}/${arch}
     fi
 }
 
