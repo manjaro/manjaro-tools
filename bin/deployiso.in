@@ -20,6 +20,7 @@ import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-publish.sh
 
 show_profile(){
+    profile="$1"
     prepare_transfer "$1"
     info "Profile: [$1]"
     msg2 "src_dir: ${src_dir}"
