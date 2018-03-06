@@ -64,7 +64,7 @@ overriding
 # chroots_dir=/var/lib/manjaro-tools
 
 # custom build mirror server
-# build_mirror=http://mirror.netzspielplatz.de/manjaro/packages
+# build_mirror=https://mirror.netzspielplatz.de/manjaro/packages
 
 ################ buildtree ###############
 
