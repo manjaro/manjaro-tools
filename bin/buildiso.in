@@ -156,7 +156,6 @@ usage() {
     echo "                       [default: ${gpgkey}]"
     echo '    -m                 Set SquashFS image mode to persistence'
     echo '    -c                 Disable clean work dir'
-    echo '    -f                 Build full iso (extra=true)'
     echo '    -x                 Build images only'
     echo '    -z                 Generate iso only'
     echo '                       Requires pre built images (-x)'
@@ -170,7 +169,7 @@ usage() {
 
 orig_argv=("$0" "$@")
 
-opts='p:a:b:r:t:k:i:g:cfzxmvqh'
+opts='p:a:b:r:t:k:i:g:czxmvqh'
 
 while getopts "${opts}" arg; do
     case "${arg}" in
@@ -183,10 +182,9 @@ while getopts "${opts}" arg; do
         i) initsys="$OPTARG" ;;
         g) gpgkey="$OPTARG" ;;
         c) clean_first=false ;;
-        f) full_iso=true ;;
         x) images_only=true ;;
         z) iso_only=true ;;
-        m) persist=true ;;        
+        m) persist=true ;;
         v) verbose=true ;;
         q) pretend=true ;;
         h|?) usage 0 ;;
