@@ -260,9 +260,9 @@ gen_iso_fn(){
     [[ ${initsys} == 'openrc' ]] && vars+=("${initsys}")
     vars+=("${dist_release}")
     vars+=("${target_branch}")
-    
-    ! [[ ${full_iso} ]] && vars+=("minimal")
-    
+    if ! ${full_iso}; then
+        vars+=("minimal")
+    fi
     vars+=("${target_arch}")    
     for n in ${vars[@]};do
         name=${name:-}${name:+-}${n}
