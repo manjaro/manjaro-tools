@@ -16,15 +16,14 @@ BIN_BASE = \
 
 LIBS_BASE = \
 	lib/util.sh \
-	lib/util-mount.sh \
 	lib/util-msg.sh \
+	lib/util-mount.sh \
 	lib/util-chroot.sh \
 	lib/util-fstab.sh
 
 SHARED_BASE = \
 	data/pacman-default.conf \
-	data/pacman-multilib.conf \
-	data/pacman-mirrors.conf
+	data/pacman-multilib.conf
 
 LIST_PKG = \
 	$(wildcard data/pkg.list.d/*.list)
@@ -88,7 +87,8 @@ BIN_YAML = \
 	bin/check-yaml
 
 LIBS_YAML = \
-	lib/util-yaml.sh
+	$(wildcard lib/util-yaml*.sh) \
+	lib/util-profile.sh
 
 SHARED_YAML = \
 	data/linux.preset

@@ -11,7 +11,10 @@
 
 import ${LIBDIR}/util-chroot.sh
 import ${LIBDIR}/util-iso-chroot.sh
+import ${LIBDIR}/util-iso-grub.sh
 import ${LIBDIR}/util-yaml.sh
+import ${LIBDIR}/util-iso-mount.sh
+import ${LIBDIR}/util-profile.sh
 
 error_function() {
     if [[ -p $logpipe ]]; then
@@ -69,30 +72,6 @@ trap_exit() {
     kill "-$sig" "$$"
 }
 
-configure_thus(){
-    local fs="$1"
-    msg2 "Configuring Thus ..."
-    source "$fs/etc/mkinitcpio.d/${kernel}.preset"
-    local conf="$fs/etc/thus.conf"
-    echo "[distribution]" > "$conf"
-    echo "DISTRIBUTION_NAME = \"${dist_name} Linux\"" >> "$conf"
-    echo "DISTRIBUTION_VERSION = \"${dist_release}\"" >> "$conf"
-    echo "SHORT_NAME = \"${dist_name}\"" >> "$conf"
-    echo "[install]" >> "$conf"
-    echo "LIVE_MEDIA_SOURCE = \"/run/miso/bootmnt/${iso_name}/${target_arch}/rootfs.sfs\"" >> "$conf"
-    echo "LIVE_MEDIA_DESKTOP = \"/run/miso/bootmnt/${iso_name}/${target_arch}/desktopfs.sfs\"" >> "$conf"
-    echo "LIVE_MEDIA_TYPE = \"squashfs\"" >> "$conf"
-    echo "LIVE_USER_NAME = \"${username}\"" >> "$conf"
-    echo "KERNEL = \"${kernel}\"" >> "$conf"
-    echo "VMLINUZ = \"$(echo ${ALL_kver} | sed s'|/boot/||')\"" >> "$conf"
-    echo "INITRAMFS = \"$(echo ${default_image} | sed s'|/boot/||')\"" >> "$conf"
-    echo "FALLBACK = \"$(echo ${fallback_image} | sed s'|/boot/||')\"" >> "$conf"
-
-    if [[ -f $fs/usr/share/applications/thus.desktop && -f $fs/usr/bin/kdesu ]];then
-        sed -i -e 's|sudo|kdesu|g' $fs/usr/share/applications/thus.desktop
-    fi
-}
-
 configure_live_image(){
     local fs="$1"
     msg "Configuring [livefs]"
@@ -100,7 +79,6 @@ configure_live_image(){
     configure_system "$fs"
     configure_services "$fs"
     configure_calamares "$fs"
-    [[ ${edition} == "sonar" ]] && configure_thus "$fs"
     write_live_session_conf "$fs"
     msg "Done configuring [livefs]"
 }
@@ -130,7 +108,7 @@ make_sfs() {
         error "The path %s does not exist" "${src}"
         retrun 1
     fi
-    local timer=$(get_timer) dest=${iso_root}/${iso_name}/${target_arch}
+    local timer=$(get_timer) dest=${iso_root}/${os_id}/${target_arch}
     local name=${1##*/}
     local sfs="${dest}/${name}.sfs"
     mkdir -p ${dest}
@@ -199,16 +177,14 @@ make_sfs() {
 
 assemble_iso(){
     msg "Creating ISO image..."
-    local iso_publisher="$(get_osname) <$(get_disturl)>" \
-        iso_app_id="$(get_osname) Live/Rescue CD" \
-        mod_date=$(date -u +%Y-%m-%d-%H-%M-%S-00  | sed -e s/-//g)
+    local mod_date=$(date -u +%Y-%m-%d-%H-%M-%S-00  | sed -e s/-//g)
 
     xorriso -as mkisofs \
         --modification-date=${mod_date} \
         --protective-msdos-label \
         -volid "${iso_label}" \
-        -appid "${iso_app_id}" \
-        -publisher "${iso_publisher}" \
+        -appid "$(get_osname) Live/Rescue CD" \
+        -publisher "$(get_osname) <$(get_disturl)>" \
         -preparer "Prepared by manjaro-tools/${0##*/}" \
         -r -graft-points -no-pad \
         --sort-weight 0 / \
@@ -253,7 +229,7 @@ make_iso() {
 
 gen_iso_fn(){
     local vars=() name
-    vars+=("${iso_name}")
+    vars+=("${os_id}")
     if ! ${chrootcfg};then
         [[ -n ${profile} ]] && vars+=("${profile}")
     fi
@@ -267,12 +243,12 @@ gen_iso_fn(){
     echo $name
 }
 
-reset_pac_conf(){
-    local fs="$1"
-    info "Restoring [%s/etc/pacman.conf] ..." "$fs"
-    sed -e 's|^.*HoldPkg.*|HoldPkg      = pacman glibc manjaro-system|' \
-        -e "s|^.*#CheckSpace|CheckSpace|" \
-        -i "$fs/etc/pacman.conf"
+copy_overlay(){
+    local src="$1" dest="$2"
+    if [[ -e "$src" ]];then
+        msg2 "Copying [%s] ..." "${src##*/}"
+        cp -LR "$src"/* "$dest"
+    fi
 }
 
 # Base installation (rootfs)
@@ -285,10 +261,7 @@ make_image_root() {
 
         create_chroot "${mkchroot_args[@]}" "${rootfs}" "${packages[@]}"
 
-        pacman -Qr "${rootfs}" > "${rootfs}/rootfs-pkgs.txt"
-        copy_overlay "${profile_dir}/root-overlay" "${rootfs}"
-
-        reset_pac_conf "${rootfs}"
+        copy_overlay "${root_overlay}" "${rootfs}"
 
         configure_lsb "${rootfs}"
 
@@ -309,11 +282,7 @@ make_image_desktop() {
 
         create_chroot "${mkchroot_args[@]}" "${desktopfs}" "${packages[@]}"
 
-        pacman -Qr "${desktopfs}" > "${desktopfs}/desktopfs-pkgs.txt"
-        cp "${desktopfs}/desktopfs-pkgs.txt" ${iso_dir}/$(gen_iso_fn)-pkgs.txt
-        [[ -e ${profile_dir}/desktop-overlay ]] && copy_overlay "${profile_dir}/desktop-overlay" "${desktopfs}"
-
-        reset_pac_conf "${desktopfs}"
+        copy_overlay "${desktop_overlay}" "${desktopfs}"
 
         umount_fs
         clean_up_image "${desktopfs}"
@@ -333,11 +302,11 @@ make_image_live() {
 
         create_chroot "${mkchroot_args[@]}" "${livefs}" "${packages[@]}"
 
-        pacman -Qr "${livefs}" > "${livefs}/livefs-pkgs.txt"
-        copy_overlay "${profile_dir}/live-overlay" "${livefs}"
+        copy_overlay "${live_overlay}" "${livefs}"
+
         configure_live_image "${livefs}"
 
-        reset_pac_conf "${livefs}"
+        pacman -Qr "${livefs}" > ${iso_dir}/$(gen_iso_fn)-pkgs.txt
 
         umount_fs
 
@@ -350,24 +319,22 @@ make_image_live() {
 make_image_mhwd() {
     if [[ ! -e ${work_dir}/mhwdfs.lock ]]; then
         msg "Prepare [drivers repository] (mhwdfs)"
-        local mhwdfs="${work_dir}/mhwdfs"
+        local mhwdfs="${work_dir}/mhwdfs" repo="/opt/pkg"
 
-        prepare_dir "${mhwdfs}${mhwd_repo}"
+        prepare_dir "${mhwdfs}${repo}"
 
         mount_fs "${mhwdfs}" "${work_dir}" "${desktop_list}"
 
-        reset_pac_conf "${mhwdfs}"
-
-        copy_from_cache "${mhwdfs}" "${packages[@]}"
+        copy_from_cache "${mhwdfs}" "${repo}" "${packages[@]}"
 
         if [[ -n "${packages_cleanup[@]}" ]]; then
             for pkg in ${packages_cleanup[@]}; do
-                rm ${mhwdfs}${mhwd_repo}/${pkg}
+                rm ${mhwdfs}${repo}/${pkg}
             done
         fi
 
-        make_repo "${mhwdfs}"
-        configure_mhwd_drivers "${mhwdfs}"
+        make_repo "${mhwdfs}" "${repo}"
+        configure_mhwd_drivers "${mhwdfs}" "${repo}"
 
         umount_fs
         clean_up_image "${mhwdfs}"
@@ -405,7 +372,7 @@ make_image_boot() {
 
 configure_grub(){
     local conf="$1"
-    local default_args="misobasedir=${iso_name} misolabel=${iso_label}" boot_args=('quiet')
+    local default_args="misobasedir=${os_id} misolabel=${iso_label}" boot_args=('quiet')
     [[ ${initsys} == 'systemd' ]] && boot_args+=('systemd.show_status=1')
 
     sed -e "s|@DIST_NAME@|${dist_name}|g" \
@@ -418,7 +385,7 @@ configure_grub(){
 
 configure_grub_theme(){
     local conf="$1"
-    sed -e "s|@ISO_NAME@|${iso_name}|" -i "$conf"
+    sed -e "s|@ISO_NAME@|${os_id}|" -i "$conf"
 }
 
 make_grub(){
@@ -464,18 +431,18 @@ compress_images(){
 
 prepare_images(){
     local timer=$(get_timer)
-    load_pkgs "${profile_dir}/Packages-Root"
+    load_pkgs "${root_list}" "${target_arch}" "${edition}" "${initsys}" "${kernel}"
     run_safe "make_image_root"
     if [[ -f "${desktop_list}" ]] ; then
-        load_pkgs "${desktop_list}"
+        load_pkgs "${desktop_list}" "${target_arch}" "${edition}" "${initsys}" "${kernel}"
         run_safe "make_image_desktop"
     fi
-    if [[ -f ${profile_dir}/Packages-Live ]]; then
-        load_pkgs "${profile_dir}/Packages-Live"
+    if [[ -f ${live_list} ]]; then
+        load_pkgs "${live_list}" "${target_arch}" "${edition}" "${initsys}" "${kernel}"
         run_safe "make_image_live"
     fi
-    if [[ -f ${mhwd_list} ]] ; then
-        load_pkgs "${mhwd_list}"
+    if ! ${netinstall} ; then
+        load_pkgs "${mhwd_list}" "${target_arch}" "${edition}" "${initsys}" "${kernel}"
         run_safe "make_image_mhwd"
     fi
     run_safe "make_image_boot"
@@ -498,11 +465,10 @@ make_profile(){
     if ${clean_first};then
         chroot_clean "${chroots_iso}/${profile}/${target_arch}"
 
-        local unused_arch=''
-        case ${target_arch} in
-            i686) unused_arch='x86_64' ;;
-            x86_64) unused_arch='i686' ;;
-        esac
+        local unused_arch='i686'
+        if [[ ${target_arch} == 'i686' ]];then
+            unused_arch='x86_64'
+        fi
         if [[ -d "${chroots_iso}/${profile}/${unused_arch}" ]];then
             chroot_clean "${chroots_iso}/${profile}/${unused_arch}"
         fi
@@ -528,20 +494,6 @@ make_profile(){
     reset_profile
     msg "Finished building [%s]" "${profile}"
     show_elapsed_time "${FUNCNAME}" "${timer_start}"
-}
-
-get_pacman_conf(){
-    local user_conf=${profile_dir}/user-repos.conf pac_arch='default' conf
-    [[ "${target_arch}" == 'x86_64' ]] && pac_arch='multilib'
-    if [[ -f ${user_conf} ]];then
-        info "detected: %s" "user-repos.conf"
-        check_user_repos_conf "${user_conf}"
-        conf=${tmp_dir}/custom-pacman.conf
-        cat ${DATADIR}/pacman-$pac_arch.conf ${user_conf} > "$conf"
-    else
-        conf="${DATADIR}/pacman-$pac_arch.conf"
-    fi
-    echo "$conf"
 }
 
 build(){

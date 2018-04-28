@@ -17,7 +17,6 @@ LIBDIR='@libdir@'
 SYSCONFDIR='@sysconfdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-mount.sh
 

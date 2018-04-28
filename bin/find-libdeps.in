@@ -14,7 +14,6 @@ version=@version@
 LIBDIR='@libdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util-pkg.sh
 
 set -e

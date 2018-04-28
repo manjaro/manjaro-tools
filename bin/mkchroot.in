@@ -14,7 +14,6 @@ version=@version@
 LIBDIR='@libdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-chroot.sh
 
@@ -25,39 +24,35 @@ build_locales=false
 keep_mirrors=false
 keep_flag=''
 nosetarch=false
+branch=stable
 
 usage() {
     echo "Usage: ${0##*/} [options] working-dir package-list..."
     echo ' options:'
     echo '    -C <file>     Location of a pacman config file'
     echo '    -M <file>     Location of a makepkg config file'
-    echo '    -S <file>     Location of a pacman-mirrors config file'
+    echo '    -B <branch>   Set branch'
+    echo '    -U <url>      Set a specific mirror'
     echo '    -c <dir>      Set pacman cache'
     echo '    -f <file>     Copy file from the host to the chroot'
     echo '    -s            Do not run setarch'
-    echo '    -L            Use build locale.gen en/de'
-    echo '    -B            Use custom build mirror'
-    echo '    -K            Keep mirrorlist (-B)'
-    echo '    -x            copy pacman.conf'
     echo '    -h            This message'
     exit 1
 }
 
 orig_argv=("$0" "$@")
 
-opts='hLKC:M:S:c:B:f:s'
+opts='hC:M:U:B:c:f:s'
 
 while getopts ${opts} arg; do
     case "${arg}" in
-        C) pac_conf="$OPTARG" ;;
+        C) pacman_conf="$OPTARG" ;;
         M) makepkg_conf="$OPTARG" ;;
-        S) mirrors_conf="$OPTARG" ;;
+        B) branch="$OPTARG" ;;
+        U) mirror="$OPTARG" ;;
         c) cache_dir="$OPTARG" ;;
         f) files+=("$OPTARG") ;;
         s) nosetarch=true ;;
-        L) build_locales=true ;;
-        B) build_mirror="$OPTARG" ;;
-        K) keep_mirrors=true; keep_flag='-K' ;;
         h|?) usage ;;
         *) error "invalid argument '%s'" "$arg"; usage ;;
     esac
@@ -79,6 +74,9 @@ else
     cache_dirs=(${cache_dir})
 fi
 
+basestrap_args=(-GMcd ${pacman_conf:+-C "$pacman_conf"} -B "${branch}")
+[[ -n ${mirror} ]] && basestrap_args+=(-U "${mirror}")
+
 umask 0022
 
 #[[ -e $working_dir ]] && die "Working directory '%s' already exists" "$working_dir"
@@ -97,52 +95,25 @@ if is_btrfs "$working_dir"; then
     chmod 0755 "$working_dir"
 fi
 
-for file in "${files[@]}"; do
-    mkdir -p "$(dirname "$working_dir$file")"
-    cp "$file" "$working_dir$file"
+for f in "${files[@]}"; do
+    mkdir -p "$(dirname "$working_dir$f")"
+    cp "$f" "$working_dir$f"
 done
 
-# Workaround when creating a chroot in a branch different of the host
-if [[ -n $pac_conf ]] && [[ -n $mirrors_conf ]] && [[ -n ${build_mirror} ]]; then
-    url=${build_mirror}'/$repo/$arch'
-    info "mirror: %s" "$url"
-    pac_base="$working_dir/pacman-basestrap.conf"
-    sed "s#Include = /etc/pacman.d/mirrorlist#Server = ${url}#g" $pac_conf > $pac_base
-
-    _env=()
-    while read -r varname; do
-        _env+=("$varname=${!varname}")
-    done < <(declare -x | sed -r 's/^declare -x ([^=]*)=.*/\1/' | grep -i '_proxy$')
-    env -i "${_env[@]}" \
-    basestrap -GMcd ${pac_base:+-C "$pac_base"} "$working_dir" \
-    "${cache_dirs[@]/#/--cachedir=}" "$@" || die 'Failed to install all packages'
-
-    [[ -f "$pac_base" ]] && rm "$pac_base"
-else
-    _env=()
-    while read -r varname; do
-        _env+=("$varname=${!varname}")
-    done < <(declare -x | sed -r 's/^declare -x ([^=]*)=.*/\1/' | grep -i '_proxy$')
-    env -i "${_env[@]}" \
-    basestrap -GMcd ${pac_conf:+-C "$pac_conf"} "$working_dir" \
-    "${cache_dirs[@]/#/--cachedir=}" "$@" || die 'Failed to install all packages'
-fi
+_env=()
+while read -r varname; do
+    _env+=("$varname=${!varname}")
+done < <(declare -x | sed -r 's/^declare -x ([^=]*)=.*/\1/' | grep -i '_proxy$')
+env -i "${_env[@]}" \
+basestrap "${basestrap_args[@]}" "$working_dir" ${cache_dirs[@]/#/--cachedir=} "$@" || die 'Failed to install all packages'
 
 echo "$version" > "$working_dir/.manjaro-tools"
 
-if ${build_locales};then
-    info "Using build locales ..."
-    mv "$working_dir/etc/locale.gen" "$working_dir/etc/locale.gen.bak"
-    mv "$working_dir/etc/locale.conf" "$working_dir/etc/locale.conf.bak"
-    printf '%s.UTF-8 UTF-8\n' en_US > "$working_dir/etc/locale.gen"
-    printf 'LANG=%s.UTF-8\n' en_US > "$working_dir/etc/locale.conf"
-    printf 'LC_MESSAGES=C\n' >> "$working_dir/etc/locale.conf"
-fi
+default_locale "set" "$working_dir"
 
-chroot_args=(${pac_conf:+-C "$pac_conf"} ${makepkg_conf:+-M "$makepkg_conf"} ${mirrors_conf:+-S "$mirrors_conf"} ${build_mirror:+-B "$build_mirror"} ${cache_dir:+-c "$cache_dir"} ${keep_flag})
+chroot_args=(${pacman_conf:+-C "$pacman_conf"} ${makepkg_conf:+-M "$makepkg_conf"} ${cache_dir:+-c "$cache_dir"})
 ${nosetarch} && chroot_args+=(${nosetarch:+-s})
 
 exec chroot-run \
     ${chroot_args[*]} \
     "$working_dir" locale-gen
-

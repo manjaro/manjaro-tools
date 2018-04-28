@@ -127,23 +127,6 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
             </varlistentry>
 
             <varlistentry>
-                <term><varname>geoip=</varname></term>
-
-                <listitem><para>Accepts
-                    <option>true</option> (the default)
-                    <option>false</option>.</para>
-                </listitem>
-            </varlistentry>
-
-            <varlistentry>
-                <term><varname>efi_boot_loader=</varname></term>
-
-                <listitem><para>Takes grub or gummibot. Configures
-                calamares to use that bootloader.
-                </para></listitem>
-            </varlistentry>
-
-            <varlistentry>
                 <term><varname>enable_systemd=</varname></term>
 
                 <listitem><para>Array of services that will be
@@ -199,23 +182,6 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
                 the iso using calamares.
                 </para></listitem>
             </varlistentry>
-
-            <varlistentry>
-                <term><varname>enable_systemd_live=</varname></term>
-
-                <listitem><para>Array of services that will be
-                enabled in the systemd live-cd. It has to match
-                the names of .service systemd files.
-                </para></listitem>
-            </varlistentry>
-
-            <varlistentry>
-            <term><varname>enable_openrc_live=</varname></term>
-
-            <listitem><para>Array of services that will be
-            enabled in the openrc live-cd.
-            </para></listitem>
-        </varlistentry>
 
         </variablelist>
 

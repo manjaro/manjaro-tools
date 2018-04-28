@@ -44,7 +44,7 @@ get_preset(){
 }
 
 write_bootloader_conf(){
-    local conf="${modules_dir}/bootloader.conf"
+    local conf="${modules_dir}/bootloader.conf" efi_boot_loader='grub'
     msg2 "Writing %s ..." "${conf##*/}"
     source "$(get_preset)"
     echo '---' > "$conf"
@@ -72,14 +72,6 @@ write_servicescfg_conf(){
         echo "      - name: $s" >> "$conf"
         echo '        runlevel: default' >> "$conf"
     done
-    if [[ -n ${disable_openrc[@]} ]];then
-        echo '    disabled:' >> "$conf"
-        for s in ${disable_openrc[@]};do
-            echo "      - name: $s" >> "$conf"
-            echo '        runlevel: default' >> "$conf"
-            echo '' >> "$conf"
-        done
-    fi
 }
 
 write_services_conf(){
@@ -97,12 +89,6 @@ write_services_conf(){
     echo '    - name: "graphical"' >> "$conf"
     echo '      mandatory: true' >> "$conf"
     echo '' >> "$conf"
-    echo 'disable:' >> "$conf"
-    for s in ${disable_systemd[@]};do
-        echo "    - name: $s" >> "$conf"
-        echo '      mandatory: false' >> "$conf"
-        echo '' >> "$conf"
-    done
 }
 
 write_displaymanager_conf(){
@@ -132,11 +118,11 @@ write_unpack_conf(){
     msg2 "Writing %s ..." "${conf##*/}"
     echo "---" > "$conf"
     echo "unpack:" >> "$conf"
-    echo "    - source: \"/run/miso/bootmnt/${iso_name}/${target_arch}/rootfs.sfs\"" >> "$conf"
+    echo "    - source: \"/run/miso/bootmnt/${os_id}/${target_arch}/rootfs.sfs\"" >> "$conf"
     echo "      sourcefs: \"squashfs\"" >> "$conf"
     echo "      destination: \"\"" >> "$conf"
     if [[ -f "${desktop_list}" ]] ; then
-        echo "    - source: \"/run/miso/bootmnt/${iso_name}/${target_arch}/desktopfs.sfs\"" >> "$conf"
+        echo "    - source: \"/run/miso/bootmnt/${os_id}/${target_arch}/desktopfs.sfs\"" >> "$conf"
         echo "      sourcefs: \"squashfs\"" >> "$conf"
         echo "      destination: \"\"" >> "$conf"
     fi
@@ -217,9 +203,7 @@ write_mhwdcfg_conf(){
     ${nonfree_mhwd} && drv="nonfree"
     echo "driver: ${drv}" >> "$conf"
     echo '' >> "$conf"
-    local switch='true'
-    ${netinstall} && switch='false'
-    echo "local: ${switch}" >> "$conf"
+    echo "local: ${netinstall}" >> "$conf"
     echo '' >> "$conf"
     echo 'repo: /opt/pacman-mhwd.conf' >> "$conf"
 }
@@ -231,11 +215,6 @@ write_postcfg_conf(){
     echo "keyrings:" >> "$conf"
     echo "    - archlinux" >> "$conf"
     echo "    - manjaro" >> "$conf"
-    if [[ -n ${smb_workgroup} ]];then
-        echo "" >> "$conf"
-        echo "samba:" >> "$conf"
-        echo "    - workgroup:  ${smb_workgroup}" >> "$conf"
-    fi
 }
 
 write_umount_conf(){
@@ -272,12 +251,7 @@ write_locale_conf(){
     msg2 "Writing %s ..." "${conf##*/}"
     echo "---" > "$conf"
     echo "localeGenPath: /etc/locale.gen" >> "$conf"
-    if ${geoip};then
-        echo "geoipUrl: freegeoip.net" >> "$conf"
-    else
-        echo "region: Europe" >> "$conf"
-        echo "zone: London" >> "$conf"
-    fi
+    echo "geoipUrl: freegeoip.net" >> "$conf"
 }
 
 write_settings_conf(){
@@ -337,7 +311,7 @@ write_settings_conf(){
     echo "    - show:" >> "$conf"
     echo "        - finished" >> "$conf" && write_finished_conf
     echo '' >> "$conf"
-    echo "branding: ${iso_name}" >> "$conf"
+    echo "branding: ${os_id}" >> "$conf"
     echo '' >> "$conf"
     echo "prompt-install: false" >> "$conf"
     echo '' >> "$conf"
@@ -350,87 +324,4 @@ configure_calamares(){
     prepare_dir "${modules_dir}"
     write_settings_conf "$1"
     info "Done configuring [Calamares]"
-}
-
-check_yaml(){
-    msg2 "Checking validity [%s] ..." "${1##*/}"
-    local name=${1##*/} data=$1 schema
-    case ${name##*.} in
-        yaml)
-            name=netgroups
-#             data=$1
-        ;;
-        conf)
-            name=${name%.conf}
-#             data=${tmp_dir}/$name.yaml
-#             cp $1 $data
-        ;;
-    esac
-    local schemas_dir=/usr/share/calamares/schemas
-    schema=${schemas_dir}/$name.schema.yaml
-#     pykwalify -d $data -s $schema
-    kwalify -lf $schema $data
-}
-
-write_calamares_yaml(){
-    configure_calamares "${yaml_dir}"
-    if ${validate}; then
-        for conf in "${yaml_dir}"/etc/calamares/modules/*.conf "${yaml_dir}"/etc/calamares/settings.conf; do
-            check_yaml "$conf"
-        done
-    fi
-}
-
-write_netgroup_yaml(){
-    msg2 "Writing %s ..." "${2##*/}"
-    echo "---" > "$2"
-    echo "- name: '$1'" >> "$2"
-    echo "  description: '$1'" >> "$2"
-    echo "  selected: false" >> "$2"
-    echo "  hidden: false" >> "$2"
-    echo "  critical: false" >> "$2"
-    echo "  packages:" >> "$2"
-    for p in ${packages[@]};do
-        echo "       - $p" >> "$2"
-    done
-    ${validate} && check_yaml "$2"
-}
-
-write_pacman_group_yaml(){
-    packages=$(pacman -Sgq "$1")
-    prepare_dir "${cache_dir_netinstall}/pacman"
-    write_netgroup_yaml "$1" "${cache_dir_netinstall}/pacman/$1.yaml"
-    ${validate} && check_yaml "${cache_dir_netinstall}/pacman/$1.yaml"
-    user_own "${cache_dir_netinstall}/pacman" "-R"
-}
-
-prepare_check(){
-    profile=$1
-    local edition=$(get_edition ${profile})
-    profile_dir=${run_dir}/${edition}/${profile}
-    check_profile "${profile_dir}"
-    load_profile_config "${profile_dir}/profile.conf"
-
-    yaml_dir=${cache_dir_netinstall}/${profile}/${target_arch}
-
-    prepare_dir "${yaml_dir}"
-    user_own "${yaml_dir}"
-}
-
-gen_fn(){
-    echo "${yaml_dir}/$1-${target_arch}-${initsys}.yaml"
-}
-
-make_profile_yaml(){
-    prepare_check "$1"
-    load_pkgs "${profile_dir}/Packages-Root"
-    write_netgroup_yaml "$1" "$(gen_fn "Packages-Root")"
-    if [[ -f "${desktop_list}" ]]; then
-        load_pkgs "${desktop_list}"
-        write_netgroup_yaml "$1" "$(gen_fn "Packages-Desktop")"
-    fi
-    ${calamares} && write_calamares_yaml "$1"
-    user_own "${cache_dir_netinstall}/$1" "-R"
-    reset_profile
-    unset yaml_dir
 }

@@ -14,7 +14,6 @@ version=@version@
 LIBDIR='@libdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-mount.sh
 
@@ -30,35 +29,29 @@ usage() {
     echo ' options:'
     echo '    -C <file>     Location of a pacman config file'
     echo '    -M <file>     Location of a makepkg config file'
-    echo '    -S <file>     Location of a pacman-mirrors config file'
     echo '    -c <dir>      Set pacman cache'
     echo '    -f <file>     Copy file from the host to the chroot'
     echo '    -s            Do not run setarch'
     echo '    -r <list>     Bind mountargs ro'
     echo '    -w <list>     Bind mountargs rw'
     echo '                  List format [src1:target1 ... srcN:targetN]'
-    echo '    -B            Use custom  build mirror'
-    echo '    -K            Keep mirrorlist (-B)'
     echo '    -h            This message'
     exit 1
 }
 
 orig_argv=("$0" "$@")
 
-opts='hKC:M:S:c:r:w:B:f:s'
+opts='hC:M:c:r:w:f:s'
 
 while getopts ${opts} arg; do
     case "${arg}" in
-        C) pac_conf="$OPTARG" ;;
+        C) pacman_conf="$OPTARG" ;;
         M) makepkg_conf="$OPTARG" ;;
-        S) mirrors_conf="$OPTARG" ;;
         c) cache_dir="$OPTARG" ;;
         f) files+=("$OPTARG") ;;
         s) nosetarch=true ;;
         r) bindmounts_ro=("$OPTARG") ;;
         w) bindmounts_rw=("$OPTARG") ;;
-        B) build_mirror="$OPTARG" ;;
-        K) keep_mirrors=true ;;
         h|?) usage ;;
         *) error "invalid argument '$arg'"; usage ;;
     esac
@@ -83,27 +76,15 @@ fi
 copy_hostconf () {
     cp -a /etc/pacman.d/gnupg "$1/etc/pacman.d"
 
-    [[ -n $pac_conf ]] && cp $pac_conf "$1/etc/pacman.conf"
+    [[ -n $pacman_conf ]] && cp $pacman_conf "$1/etc/pacman.conf"
 
     [[ -n $makepkg_conf ]] && cp $makepkg_conf "$1/etc/makepkg.conf"
-    [[ -n $mirrors_conf ]] && cp ${mirrors_conf} "$1/etc/pacman-mirrors.conf"
 
     local file
     for file in "${files[@]}"; do
         mkdir -p "$(dirname "$working_dir$file")"
         cp -T "$file" "$working_dir$file"
     done
-
-    if [[ -n ${build_mirror} ]];then
-        build_mirror=${build_mirror}'/$repo/$arch'
-        if ${keep_mirrors}; then
-            set_branch "$1" "$(get_branch $1)"
-        else
-            echo "Server = ${build_mirror}" > "$1/etc/pacman.d/mirrorlist"
-        fi
-    else
-        set_branch "$1" "$(get_branch $1)"
-    fi
 
     sed -r "s|^#?\\s*CacheDir.+|CacheDir = $(echo -n ${cache_dirs[@]})|g" -i "$1/etc/pacman.conf"
 }
@@ -145,5 +126,3 @@ eval $(grep '^CARCH=' "$working_dir/etc/makepkg.conf")
 ${nosetarch} && unset CARCH
 
 ${CARCH:+setarch "$CARCH"} chroot "${working_dir}" "$@"
-
-# kill_chroot_process "${working_dir}"

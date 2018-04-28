@@ -16,29 +16,31 @@ DATADIR='@datadir@'
 SYSCONFDIR='@sysconfdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-iso.sh
-import ${LIBDIR}/util-iso-mount.sh
 
 prepare_build(){
     timer_start=$(get_timer)
     profile=$1
     edition=$(get_edition "${profile}")
-    profile_dir=${run_dir}/${edition}/${profile}
+    local profile_dir=${run_dir}/${edition}/${profile}
 
-    check_profile "${profile_dir}"
-    load_profile_config "${profile_dir}/profile.conf"
+    load_profile "${profile_dir}"
 
-    local pacman_conf=$(get_pacman_conf)
-
-    local mirrors_conf=$(get_pac_mirrors_conf "${target_branch}")
+    local user_conf=${profile_dir}/user-repos.conf pac_arch='default' pacman_conf
+    [[ "${target_arch}" == 'x86_64' ]] && pac_arch='multilib'
+    if [[ -f ${user_conf} ]];then
+        info "detected: %s" "user-repos.conf"
+        check_user_repos_conf "${user_conf}"
+        pacman_conf=${tmp_dir}/custom-pacman.conf
+        cat ${DATADIR}/pacman-$pac_arch.conf ${user_conf} > "$pacman_conf"
+    else
+        pacman_conf="${DATADIR}/pacman-$pac_arch.conf"
+    fi
 
     iso_file=$(gen_iso_fn).iso
 
-    local mirror="${build_mirror}/${target_branch}"
-
-    mkchroot_args+=(-C ${pacman_conf} -S ${mirrors_conf} -B "${mirror}" -K)
+    mkchroot_args+=(-C ${pacman_conf} -U "${build_mirror}/" -B "${target_branch}")
     work_dir=${chroots_iso}/${profile}/${target_arch}
 
     iso_dir="${cache_dir_iso}/${edition}/${profile}/${dist_release}"
@@ -66,25 +68,18 @@ show_profile(){
         msg2 "netinstall: %s" "${netinstall}"
         msg2 "chrootcfg: %s" "${chrootcfg}"
         ${netinstall} && msg2 "netgroups: %s" "$(get_yaml)"
-        msg2 "geoip: %s" "${geoip}"
-
-        msg2 "efi_boot_loader: %s" "${efi_boot_loader}"
 
         msg2 "hostname: %s" "${hostname}"
         msg2 "username: %s" "${username}"
         msg2 "password: %s" "${password}"
         msg2 "login_shell: %s" "${login_shell}"
         msg2 "addgroups: %s" "${addgroups}"
-        [[ -n ${smb_workgroup} ]] && msg2 "smb_workgroup: %s" "${smb_workgroup}"
 
+        msg2 "enable_live: %s" "${enable_live[*]}"
         if [[ ${initsys} == 'systemd' ]];then
             msg2 "enable_systemd: %s" "${enable_systemd[*]}"
-            msg2 "enable_systemd_live: %s" "${enable_systemd_live[*]}"
-            [[ -n ${disable_systemd[*]} ]] && msg2 "disable_systemd: %s" "${disable_systemd[*]}"
         else
             msg2 "enable_openrc: %s" "${enable_openrc[*]}"
-            msg2 "enable_openrc_live: %s" "${enable_openrc_live[*]}"
-            [[ -n ${disable_openrc[*]} ]] && msg2 "disable_openrc: %s" "${disable_openrc[*]}"
         fi
     fi
     reset_profile
@@ -128,7 +123,7 @@ load_user_info
 
 load_config "${MT_USERCONFDIR}/manjaro-tools.conf" || load_config "${SYSCONFDIR}/manjaro-tools.conf"
 
-load_run_dir "${profile_repo}"
+load_run_dir
 
 clean_first=true
 pretend=false
@@ -137,7 +132,7 @@ iso_only=false
 verbose=false
 persist=false
 
-mkchroot_args=(-L)
+mkchroot_args=()
 
 usage() {
     echo "Usage: ${0##*/} [options]"

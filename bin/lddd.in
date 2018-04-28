@@ -11,7 +11,9 @@
 
 version=@version@
 
-[[ -r @libdir@/util-msg.sh ]] && source @libdir@/util-msg.sh
+LIBDIR='@libdir@'
+
+[[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
 
 ifs=$IFS
 IFS="${IFS}:"

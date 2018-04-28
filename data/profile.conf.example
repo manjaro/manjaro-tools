@@ -20,33 +20,22 @@
 # nonfree xorg drivers
 # nonfree_mhwd="true"
 
-# possible values: grub;systemd-boot
-# efi_boot_loader="grub"
-
 # configure calamares for netinstall
 # netinstall="false"
 
 # configure calamares to use chrootcfg instead of unpackfs; default: unpackfs
 # chrootcfg="false"
 
-# use geoip
-# geoip="true"
-
 # unset defaults to given values
 # names must match systemd service names
 # enable_systemd=('bluetooth' 'cronie' 'ModemManager' 'NetworkManager' 'org.cups.cupsd' 'tlp' 'tlp-sleep')
-# disable_systemd=()
 
 # unset defaults to given values,
 # names must match openrc service names
-# enable_openrc=('acpid' 'bluetooth' 'consolekit' 'cronie' 'cupsd' 'dbus' 'syslog-ng' 'NetworkManager')
-# disable_openrc=()
+# enable_openrc=('acpid' 'bluetooth' 'elogind' 'cronie' 'cupsd' 'dbus' 'syslog-ng' 'NetworkManager')
 
 # unset defaults to given values
 # addgroups="video,power,disk,storage,optical,network,lp,scanner,wheel"
-
-# the same workgroup name if samba is used
-# smb_workgroup="Manjaro"
 
 ################# live-session #################
 
@@ -58,13 +47,3 @@
 
 # unset defaults to given value
 # password="manjaro"
-
-# unset defaults to given values
-# names must match systemd service names
-# services in enable_systemd array don't need to be listed here
-# enable_systemd_live=('manjaro-live' 'mhwd-live' 'pacman-init' 'mirrors-live')
-
-# unset defaults to given values,
-# names must match openrc service names
-# services in enable_openrc array don't need to be listed here
-# enable_openrc_live=('manjaro-live' 'mhwd-live' 'pacman-init' 'mirrors-live')

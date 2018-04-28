@@ -116,9 +116,9 @@ die() {
 }
 
 import(){
-    if [[ -r $1 ]];then
-        source $1
+    if [[ -r "$1" ]];then
+        source "$1"
     else
-        die "Could not import $1"
+        die 'Could not import %s' "$1"
     fi
 }

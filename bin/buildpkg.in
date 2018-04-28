@@ -18,7 +18,6 @@ DATADIR='@datadir@'
 SYSCONFDIR='@sysconfdir@'
 
 [[ -r ${LIBDIR}/util-msg.sh ]] && source ${LIBDIR}/util-msg.sh
-
 import ${LIBDIR}/util.sh
 import ${LIBDIR}/util-chroot.sh
 import ${LIBDIR}/util-pkg.sh
@@ -89,7 +88,7 @@ sign=false
 udev_root=false
 is_multilib=false
 
-mkchroot_args=(-L)
+mkchroot_args=()
 mkchrootpkg_args=()
 
 install_pkgs=()
@@ -111,13 +110,11 @@ prepare_build(){
 
     [[ "$pac_arch" == 'multilib' ]] && target_arch='x86_64'
 
-    local mirror="${build_mirror}/${target_branch}"
-
-    local mirrors_conf=$(get_pac_mirrors_conf "${target_branch}")
-
-    mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -S ${mirrors_conf} -B ${mirror})
+    mkchroot_args+=(-C ${pacman_conf} -M ${makepkg_conf} -U "${build_mirror}/" -B "${target_branch}")
 
     mkchrootpkg_args+=(-r ${work_dir})
+
+    prepare_dir "${work_dir}"
 
     eval_build_list "${list_dir_pkg}" "${build_list_pkg}"
 
