@@ -46,8 +46,8 @@ else
     WORKDIR=$(mktemp -d --tmpdir "${0##*/}.XXXXXXXXXX")
 
     case ${script_mode} in
-        deps) bsdtar -C "$WORKDIR" -xf "$1";;
-        provides) bsdtar -C "$WORKDIR" -xf "$1" --include="*.so*";;
+        deps) bsdtar -C "$WORKDIR" -kxf "$1";;
+        provides) bsdtar -C "$WORKDIR" -kxf "$1" --include="*.so*";;
     esac
 
     pushd "$WORKDIR" >/dev/null
